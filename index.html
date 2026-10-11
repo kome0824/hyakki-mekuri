@@ -759,7 +759,7 @@ const FEVER_MS = 4000;
 const REFILL_MS = 420;
 const PLAYER_HP = 60;
 // 版：公開するたびに変える（ホーム画面のアプリは開きっぱなしで古い版のまま動くことがあるので、新しい版があれば読み込み直す）
-const BUILD = '2026-10-11.1';
+const BUILD = '2026-10-11.2';
 const SAVE_KEY = 'hyakki-mekuri.v1';
 const OLD_SAVE_KEY = 'dopa-mekuri.v1'; // 旧名のころの保存（読み込みのみ）
 
@@ -3204,8 +3204,9 @@ function exportCode(){
 }
 function parseCode(code){
   try {
-    // 欄に前の文字や2回分の貼り付けが混ざっていても、最初の「HYAKKI1:…」だけを取り出す
-    const m = (code || '').replace(/[\s\u200b\u2060\ufeff]+/g, '').match(/HYAKKI1:([A-Za-z0-9+\/]+=*)/);
+    // 欄に前の文字や2回分の貼り付けが混ざっていても、最初の「HYAKKI1:…」だけを取り出す。
+    // 先頭の HYAKKI1 は iPhone の入力やメモで小文字に直されることがあるので、大文字小文字は問わない（後ろの中身は大文字小文字が意味を持つのでそのまま）
+    const m = (code || '').replace(/[\s\u200b\u2060\ufeff]+/g, '').match(/HYAKKI1:([A-Za-z0-9+\/]+=*)/i);
     if (!m) return null;
     const bin = atob(m[1]);
     const d = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0))));
@@ -3233,7 +3234,7 @@ function confirmImport(code){
     const t = (code || '').trim();
     if (!t) return toast('欄が空です。コピーしたコードを貼り付けてください');
     const head = t.replace(/\s+/g, ' ').slice(0, 14);
-    return toast(t.includes(MOVE_HEAD)
+    return toast(t.toUpperCase().includes(MOVE_HEAD)
       ? 'コードが途中で切れているようです。コピーし直して、全部貼り付けてください'
       : `引き継ぎのコードではありません（貼り付けた文字の先頭：「${head}…」）。元の場所で「コードをコピー」し直してください`);
   }
