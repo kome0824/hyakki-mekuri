@@ -459,7 +459,7 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
 .mini.dexfoe{background:#141620;border:1px solid var(--line);box-shadow:none;padding:calc(var(--u)*1)}
 .mini.dexfoe svg{display:block;width:100%;height:100%}
 #choose.norun{padding-top:calc(var(--u)*7)}
-/* ふだんは中身の一覧だけがスクロールする（cscroll は枠なし）。記録の画面は、題から一覧まで全体でスクロールし、下のボタンは動かない */
+/* ふだんは中身の一覧だけがスクロールする（cscroll は枠なし）。記録の画面は、題の下から一覧まで全体でスクロールし、題と下のボタンは動かない */
 #choose .cscroll{display:contents}
 #choose.scrollall .cscroll{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*2.4);flex:1;min-height:0;width:100%;
   overflow-y:auto;overscroll-behavior:contain}
@@ -575,8 +575,8 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
   </section>
 
   <section id="choose" class="screen">
+    <h2 id="cTitle"></h2>
     <div class="cscroll" id="cScroll">
-      <h2 id="cTitle"></h2>
       <div class="rsub" id="cSub"></div>
       <div class="picks" id="cItems"></div>
     </div>
