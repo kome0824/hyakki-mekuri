@@ -8,6 +8,17 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="百鬼めくり">
 <title>百鬼めくり</title>
+<!-- リンクを貼ったときのカード（X・Discord・LINE など）。画像は pv/ogp_make.js で作る -->
+<meta name="description" content="めくって、そろえて、百鬼を祓え。スマホのブラウザでそのまま遊べる札合わせローグライク。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="百鬼めくり">
+<meta property="og:description" content="めくって、そろえて、百鬼を祓え。スマホのブラウザでそのまま遊べる札合わせローグライク。">
+<meta property="og:url" content="https://kome0824.github.io/hyakki-mekuri/">
+<meta property="og:image" content="https://kome0824.github.io/hyakki-mekuri/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
 <style>
 /* 縦画面1枚。375×667 を 100×177.9 単位(--u)で組む
    見た目の方針：百鬼夜行の夜と「札」。墨の夜・和紙・朱・金・藍の5色を基本に、
@@ -77,8 +88,8 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .endbtn small{display:block;font-size:.62em;color:var(--sub);letter-spacing:.1em;margin-top:calc(var(--u)*.4)}
 .share{margin:calc(var(--u)*1) auto 0;width:calc(var(--u)*88);text-align:center}
 .share-l{font-size:calc(var(--u)*3.2);color:var(--sub);margin-bottom:calc(var(--u)*.8)}
-.share-b{display:flex;justify-content:center;gap:calc(var(--u)*3)}
-.sns{text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*.8);width:calc(var(--u)*16);font-size:calc(var(--u)*2.8);font-weight:700;color:var(--sub)}
+.share-b{display:flex;justify-content:center;gap:calc(var(--u)*1.6)}
+.sns{text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*.8);width:calc(var(--u)*15.5);font-size:calc(var(--u)*2.8);font-weight:700;color:var(--sub)}
 .sns i{display:flex;align-items:center;justify-content:center;width:calc(var(--u)*13);height:calc(var(--u)*13);border-radius:50%;background:var(--c)}
 .sns svg{width:56%;height:56%;fill:#fff}
 .sns:active i{transform:scale(.92);filter:brightness(.9)}
@@ -89,6 +100,8 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .sns-line{--c:#06c755}
 .sns-line svg{width:62%;height:62%}
 .sns-copy{--c:#8d8a96}
+.sns-img{--c:var(--shu)}
+.sns-img svg{width:54%;height:54%}
 .sns-copy svg{width:50%;height:50%}
 .rec-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:calc(var(--u)*1.6);width:calc(var(--u)*88)}
 .rec-grid div{padding:calc(var(--u)*2) calc(var(--u)*2);border-radius:calc(var(--u)*1);background:var(--panel);border:1px solid var(--line);text-align:center}
@@ -2902,6 +2915,10 @@ function endRun(win){
       <div class="res-sec">${items.length ? '新しく解放' : (after < UNLOCKS.length ? `次の解放まで あと${UNLOCK_STEP - meta.pts % UNLOCK_STEP}` : 'すべて解放済み')}</div>
     </div>`;
   ui.share = `百鬼めくりで${win ? '三幕を越えて夜明けを迎えた！' : `${r.endless ? '果てなき夜の' : ''}第${r.act}幕 ${r.floor}階まで進んだ`}${r.asc ? `（闇${r.asc}）` : ''}\n得点${score}・最大${S.maxCombo}連・めくり熱${dg.deg}℃「${dg.name}」`;
+  prepCard({ head:'結果',
+    reach: win ? '三幕を越え、夜が明けた' : `${r.endless ? '果てなき夜 ' : ''}第${r.act}幕 ${r.floor}階で力尽きた`, asc:r.asc,
+    big:`${dg.deg}`, unit:'℃', bigLabel:'めくり熱', name:dg.name, note:dg.note, foe:r.lastFoe,
+    stats:[[score, '得点'], [S.maxCombo, '最大連続'], [S.matches, 'そろえた回数'], [`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`, '戦闘時間']] });
   chooser({ title: win ? '夜明け' : '力尽きた…', sub: html, items, btn:{ label:'タイトルへ', on:enterTitle }, guard:true });
 }
 
@@ -3115,6 +3132,10 @@ function showRecords(){
     ${m.runs ? shareRow('記録をシェア') : ''}
     <div class="res-sec">${m.hist.length ? '最近の記録' : 'まだ記録がありません'}</div>`;
   ui.share = `百鬼めくりの記録：夜明け${m.wins}回・最高得点${m.best}・最大${m.bestCombo}連${eb ? `・果てなき夜 第${eb.act}幕${eb.floor}階` : ''}`;
+  prepCard({ head:'記録', reach: m.maxAsc ? `闇${m.maxAsc} に挑める` : '宵の口（ふつうの難しさ）', big:`${m.wins}`, unit:'回', bigLabel:'夜明け',
+    name: eb ? `果てなき夜 第${eb.act}幕 ${eb.floor}階` : m.hist.length ? `めくり熱 最高 ${Math.max(...m.hist.map(h => h.deg || 0))}℃` : '',
+    note: eb ? '果てなき夜の最高到達' : m.hist.length ? `直近${m.hist.length}回の記録から` : '',
+    stats:[[m.best, '最高得点'], [m.bestCombo, '最大連続'], [m.runs, '遊んだ回数'], [`${unlockedCount(m)}/${UNLOCKS.length}`, '解放']] });
   chooser({ info:true, title:'記録', sub,
     items: m.hist.map(h => ({ html:`<div class="mini info" style="--k:${h.win ? '#c9a14a' : h.e ? '#6a5aa8' : '#4a4658'}"><span class="mk">${h.win ? '明' : h.e ? '果' : '倒'}</span></div>`
       + `<div><div class="nm">${h.win ? '夜明け' : `${h.e ? '果てなき夜 ' : ''}第${h.act}幕 ${h.floor}階`}${h.asc ? `　<small>闇${h.asc}</small>` : ''}</div>`
@@ -3126,6 +3147,7 @@ $('#btnRec').addEventListener('click', showRecords);
 // ロゴの形は Simple Icons（CC0）から
 const SHARE_URL = 'https://kome0824.github.io/hyakki-mekuri/';
 const SNS = [
+  ['img', '画像', '<rect x="2.5" y="4" width="19" height="16" rx="2.2" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="8.5" cy="9.5" r="2"/><path d="M4 18.5l5.2-5.6 3.3 3.4 3.1-3.2 4.4 5.4z"/>', null],
   ['x', 'X', '<path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>',
     (t, u) => `https://twitter.com/intent/tweet?text=${t}&url=${u}`],   // x.com/intent/post だとスマホの X アプリが投稿画面を開かないことがある
   ['discord', 'Discord', '<path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/>',
@@ -3161,8 +3183,88 @@ function copyNow(){
   if (!ok) try { navigator.clipboard.writeText(text).catch(() => {}); ok = true; } catch(e){}
   return ok;
 }
+/* ---------- シェア用の画像 ----------
+   結果（記録）を 1200×675 の1枚に描く。画面を開いたときに先に描いておき、押したらすぐ渡す
+   （スマホの共有メニューは「押した直後」でないと開けないため）。スマホは画像ごと共有、PCは画像を保存 */
+const CARD_MIN = '"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP","Noto Serif CJK JP",serif';
+const CARD_GO = '"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Noto Sans CJK JP","Yu Gothic",sans-serif';
+function svgImg(svg){
+  return new Promise((ok, ng) => { const im = new Image(); im.onload = () => ok(im); im.onerror = ng; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+}
+// 幅に収まるよう文字を小さくして書く
+function fitText(g, t, x, y, maxW, size, weight, family){
+  let s = size;
+  do { g.font = `${weight} ${s}px ${family}`; s -= 2; } while (s > 12 && g.measureText(t).width > maxW);
+  g.fillText(t, x, y);
+}
+async function drawCard(c){
+  const W = 1200, H = 675, cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#17161d'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(201,161,74,.55)'; g.lineWidth = 3; g.strokeRect(22, 22, W - 44, H - 44);
+  // 左：題字と妖怪
+  g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  g.fillStyle = '#ece3cf'; g.font = `900 82px ${CARD_MIN}`; g.fillText('百鬼めくり', 64, 140);
+  g.fillStyle = '#c4412b'; g.fillRect(64, 162, 410, 7);
+  g.fillStyle = '#c9a14a'; g.font = `700 25px ${CARD_MIN}`; g.fillText('めくって、そろえて、百鬼を祓え。', 64, 212);
+  const foe = c.foe && PX[c.foe] ? c.foe : 'onibi';
+  g.fillStyle = '#141620'; g.fillRect(64, 248, 410, 330);
+  g.strokeStyle = '#3a3644'; g.lineWidth = 2; g.strokeRect(64, 248, 410, 330);
+  g.fillStyle = '#ece3cf'; g.beginPath(); g.arc(118, 300, 26, 0, Math.PI * 2); g.fill();   // 月
+  try {
+    const im = await svgImg(pxArt(foe, mute(FOES[foe].col)));
+    g.imageSmoothingEnabled = false;
+    const sz = 250, k = im.height / im.width || 1;
+    g.drawImage(im, 64 + (410 - sz) / 2, 248 + 330 - 24 - sz * k, sz, sz * k);
+  } catch(e){}
+  // 右：結果
+  const X = 540, RW = W - 64 - X;
+  g.fillStyle = '#9d9483'; g.font = `700 30px ${CARD_GO}`; g.fillText(c.head, X, 104);
+  g.fillStyle = '#ece3cf';
+  if (c.reach) fitText(g, c.reach + (c.asc ? `（闇${c.asc}）` : ''), X, 154, RW, 38, 900, CARD_MIN);
+  g.fillStyle = '#9d9483'; g.font = `700 26px ${CARD_GO}`; g.fillText(c.bigLabel, X, 214);
+  g.fillStyle = '#c4412b'; g.font = `900 132px ${CARD_GO}`; g.fillText(c.big, X - 4, 334);
+  const bw = g.measureText(c.big).width;
+  g.font = `900 54px ${CARD_GO}`; g.fillText(c.unit, X + bw + 6, 334);
+  if (c.name){ g.fillStyle = '#c9a14a'; fitText(g, c.name, X, 396, RW, 46, 900, CARD_MIN); }
+  if (c.note){ g.fillStyle = '#ece3cf'; fitText(g, c.note, X, 438, RW, 24, 500, CARD_GO); }
+  // 数字の表（4つ）
+  const cw = RW / 4;
+  c.stats.forEach(([v, l], i) => {
+    const x = X + cw * i;
+    g.fillStyle = '#24222c'; g.fillRect(x + 4, 470, cw - 8, 108);
+    g.textAlign = 'center';
+    g.fillStyle = '#ece3cf'; fitText(g, String(v), x + cw / 2, 528, cw - 20, 44, 900, CARD_GO);
+    g.fillStyle = '#9d9483'; fitText(g, l, x + cw / 2, 562, cw - 16, 20, 700, CARD_GO);
+    g.textAlign = 'left';
+  });
+  g.fillStyle = '#9d9483'; g.font = `700 22px ${CARD_GO}`;
+  g.fillText('#百鬼めくり', 64, 626);
+  g.textAlign = 'right'; g.fillText(SHARE_URL.replace(/^https:\/\//, '').replace(/\/$/, ''), W - 64, 626);
+  return new Promise(ok => cv.toBlob(ok, 'image/png'));
+}
+function prepCard(c){
+  ui.cardFile = null;
+  const my = ui.card = c;
+  drawCard(c).then(b => { if (b && ui.card === my) ui.cardFile = new File([b], 'hyakki-mekuri.png', { type:'image/png' }); }).catch(() => {});
+}
+function shareImage(){
+  const f = ui.cardFile;
+  if (!f) return toast('画像を用意しています。少し待ってもう一度押してください');
+  if (navigator.canShare && navigator.canShare({ files:[f] })){
+    navigator.share({ files:[f], text:shareText() + '\n' + SHARE_URL }).catch(() => {});
+    return;
+  }
+  const a = document.createElement('a');   // 共有できない（PCなど）ときは画像を保存
+  a.href = URL.createObjectURL(f); a.download = f.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  toast('画像を保存しました。投稿に添付してください');
+}
 function shareNow(b){
   const k = b.dataset.share;
+  if (k === 'img') return shareImage();
   if (k === 'copy'){ toast(copyNow() ? '結果をコピーしました。貼り付けてシェアできます' : 'コピーできませんでした'); return; }
   const s = SNS.find(x => x[0] === k);
   if (!s) return;
