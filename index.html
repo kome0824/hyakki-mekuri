@@ -96,7 +96,6 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .rec-grid span{font-size:calc(var(--u)*3);color:var(--sub)}
 .rec-grid .wide{grid-column:1/-1}
 .mini.info{font-family:var(--mincho)}
-.title-meta{color:var(--sub);font-size:calc(var(--u)*3.3);text-align:center;line-height:1.6}
 .asc{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*1.2);width:calc(var(--u)*84)}
 .ascsel{display:flex;align-items:center;gap:calc(var(--u)*4);font-size:calc(var(--u)*4.6)}
 .ascsel b{font-family:var(--mincho);color:var(--shu);min-width:calc(var(--u)*30);text-align:center}
@@ -517,7 +516,6 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
       <div class="ascsel"><button id="ascDn">◀</button><b id="ascNum"></b><button id="ascUp">▶</button></div>
       <div class="ascdesc" id="ascDesc"></div>
     </div>
-    <div class="title-meta" id="titleMeta"></div>
     <div class="kbdnote">キーボード：↑↓で選ぶ　Enterで決定　Escでもどる</div>
     <div class="title-note">札をどんどんめくれ<br>同じ絵柄が2枚開いたら即発動<br>妖怪は待ってくれない</div>
     <!-- 説明は画面の下段に（「はじめる」「つづきから」の近くに置かない） -->
@@ -3135,9 +3133,6 @@ function enterTitle(){
   if (newArmed){ newArmed = null; $('#btnNew').textContent = 'はじめる'; $('#btnEndless').innerHTML = '果てなき夜<small>エンドレス</small>'; }
   $('#ascRow').style.display = meta.maxAsc > 0 ? '' : 'none';
   renderAsc();
-  const n = unlockedCount(meta);
-  $('#titleMeta').innerHTML = meta.runs ? `最高得点 ${meta.best}　夜明け ${meta.wins}回<br>解放 ${n}/${UNLOCKS.length}` : '';
-  wrapJP($('#titleMeta'));
   show('title');
 }
 /* ---------- 記録 ---------- */
