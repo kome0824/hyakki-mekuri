@@ -85,7 +85,11 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .title-links{flex:none;display:flex;justify-content:center;gap:calc(var(--u)*2.4)}
 .title-links .btn{min-width:calc(var(--u)*27);padding:calc(var(--u)*2.2) calc(var(--u)*2);font-size:calc(var(--u)*3.8)}
 .endbtn{padding:calc(var(--u)*2.2) calc(var(--u)*5);font-size:calc(var(--u)*4.4)}
-.endbtn small{display:block;font-size:.62em;color:var(--sub);letter-spacing:.1em;margin-top:calc(var(--u)*.4)}
+.endbtn small{display:block;font-size:.62em;color:var(--sub);letter-spacing:.1em;margin-top:calc(var(--u)*.4);height:calc(var(--u)*3.6);line-height:calc(var(--u)*3.6)}
+/* タイトルの3つのボタンは同じ幅。「つづきから」の説明は1行に収め、長いときは文字を小さく */
+#btnNew,#btnEndless,#btnCont{width:calc(var(--u)*68);padding-left:calc(var(--u)*2);padding-right:calc(var(--u)*2)}
+#btnCont small{white-space:nowrap;letter-spacing:.02em}
+#btnCont small.long{font-size:.52em}
 .share{margin:calc(var(--u)*1.6) auto 0;text-align:center}
 .sharebtn{display:inline-flex;align-items:center;justify-content:center;gap:calc(var(--u)*1.6);min-width:calc(var(--u)*56);
   padding:calc(var(--u)*2.6) calc(var(--u)*5);font-size:calc(var(--u)*4.4)}
@@ -100,7 +104,10 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .ascsel{display:flex;align-items:center;gap:calc(var(--u)*4);font-size:calc(var(--u)*4.6)}
 .ascsel b{font-family:var(--mincho);color:var(--shu);min-width:calc(var(--u)*30);text-align:center}
 .ascsel button{width:calc(var(--u)*10);height:calc(var(--u)*10);border-radius:50%;background:var(--panel);border:1px solid var(--line);font-size:calc(var(--u)*4)}
-.ascdesc{color:var(--sub);font-size:calc(var(--u)*3);text-align:center;line-height:1.5;min-height:3em;font-weight:500}
+.ascdesc{color:var(--sub);font-size:calc(var(--u)*3);text-align:center;line-height:1.5;font-weight:500}
+/* 闇の数で高さが変わらないよう、いつも10個（5段）分の高さを取る */
+#ascDesc{height:calc(var(--u)*33.6);align-content:start}
+.ascsel button[disabled]{opacity:.3;pointer-events:none}
 /* 闇の効果：1つずつ枠に分けて2列に。頭の丸はその効果が加わる闇。今の闇で加わった効果は朱 */
 .ascgrid{display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--u)*1) calc(var(--u)*1.4);width:calc(var(--u)*90);text-align:left}
 .ascgrid div{display:flex;align-items:center;gap:calc(var(--u)*1.2);padding:calc(var(--u)*.8) calc(var(--u)*1.2);border-radius:calc(var(--u)*.8);
@@ -257,6 +264,7 @@ body.pc .slot:is(.open,.peek,.closing) .kh{display:block}
 .ovkb{width:calc(var(--u)*84)}
 .kbdnote{display:none;color:var(--sub);font-size:calc(var(--u)*3);text-align:center}
 body.pc .kbdnote{display:block}
+body.pc #title .title-note{display:none}   /* PCではタイトルの説明文の代わりにキーの説明（タイトルの高さを変えない） */
 body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(var(--u)*.4)}
 .card{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .13s ease-out}
 .slot.open .card{transform:rotateY(180deg) scale(1.05)}
@@ -526,8 +534,8 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
     <div class="logo-sub">めくって、そろえて、物の怪を祓え。</div>
     <button class="btn" id="btnNew">はじめる</button>
     <button class="btn sub endbtn" id="btnEndless">果てなき夜<small>エンドレス</small></button>
-    <button class="btn sub" id="btnCont" style="display:none">つづきから</button>
-    <div class="asc" id="ascRow" style="display:none">
+    <button class="btn sub endbtn" id="btnCont" disabled>つづきから<small>中断した周回はありません</small></button>
+    <div class="asc" id="ascRow">
       <div class="ascsel"><button id="ascDn">◀</button><b id="ascNum"></b><button id="ascUp">▶</button></div>
       <div class="ascdesc" id="ascDesc"></div>
     </div>
@@ -768,7 +776,7 @@ const FEVER_MS = 4000;
 const REFILL_MS = 420;
 const PLAYER_HP = 60;
 // 版：公開するたびに変える（ホーム画面のアプリは開きっぱなしで古い版のまま動くことがあるので、新しい版があれば読み込み直す）
-const BUILD = '2026-10-11.3';
+const BUILD = '2026-10-11.4';
 const SAVE_KEY = 'hyakki-mekuri.v1';
 const OLD_SAVE_KEY = 'dopa-mekuri.v1'; // 旧名のころの保存（読み込みのみ）
 
@@ -3133,7 +3141,8 @@ function confirmNew(id){
   if (newArmed === id) return true;
   newArmed = id;
   const el = $(id), html = el.innerHTML;
-  el.textContent = '本当に新しく始める？';
+  if (el.classList.contains('endbtn')) el.innerHTML = '本当に新しく始める？<small>もう一度押すと、つづきは消える</small>';
+  else el.textContent = '本当に新しく始める？';
   setTimeout(() => { if (newArmed === id) newArmed = null; el.innerHTML = html; }, 2500);
   return false;
 }
@@ -3169,11 +3178,22 @@ function enterTitle(){
   applyUnlocks();
   const meta = loadMeta();
   ui.asc = Math.min(ui.asc, meta.maxAsc);
-  $('#btnCont').style.display = loadSave().run ? '' : 'none';
+  renderCont();
   if (newArmed){ newArmed = null; $('#btnNew').textContent = 'はじめる'; $('#btnEndless').innerHTML = '果てなき夜<small>エンドレス</small>'; }
-  $('#ascRow').style.display = meta.maxAsc > 0 ? '' : 'none';
   renderAsc();
   show('title');
+}
+// 「つづきから」はいつも出し、つづきが無いときは押せない形に。下にどこからの続きかを小さく出す
+function renderCont(){
+  const r = loadSave().run, b = $('#btnCont');
+  b.disabled = !r;
+  let where = '中断した周回はありません';
+  if (r){
+    const pd = r.pending;
+    where = `${r.endless ? '果てなき夜 ' : ''}第${r.act}幕 ${r.floor}階${r.asc ? '・闇' + r.asc : ''}・HP ${r.hp}/${r.maxHp}`
+      + (pd && pd.won ? '・勝った直後' : pd && pd.lost ? '・力尽きた直後' : pd ? '・戦闘中' : '');
+  }
+  b.innerHTML = `つづきから<small${where.length > 24 ? ' class="long"' : ''}>${where}</small>`;
 }
 /* ---------- 記録 ---------- */
 function fmtDate(t){ const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; }
@@ -3512,9 +3532,12 @@ function renderAsc(){
     el.innerHTML = ASC.slice(1, ui.asc + 1).map((t, i) => `<div class="${i + 1 === ui.asc ? 'new' : ''}"><b>${i + 1}</b><span>${t}</span></div>`).join('');
   } else {
     el.className = 'ascdesc';
-    el.textContent = 'ふつうの難しさ（夜明けを迎えるたびに夜が深くなる）';
+    el.textContent = loadMeta().maxAsc ? 'ふつうの難しさ（夜明けを迎えるたびに夜が深くなる）' : 'ふつうの難しさ。夜明けを迎えると、もっと深い夜（闇）に挑める';
   }
   wrapJP(el);
+  const max = loadMeta().maxAsc;
+  $('#ascDn').disabled = ui.asc <= 0;
+  $('#ascUp').disabled = ui.asc >= max;
 }
 $('#ascDn').addEventListener('click', () => { ui.asc = Math.max(0, ui.asc - 1); renderAsc(); });
 $('#ascUp').addEventListener('click', () => { ui.asc = Math.min(loadMeta().maxAsc, ui.asc + 1); renderAsc(); });
