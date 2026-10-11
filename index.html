@@ -606,6 +606,7 @@ const ALL_POOL = Object.keys(SK).filter(k => SK[k].r >= 0 && !['zan','mamo'].inc
 // 解放済みの札だけが報酬・店に出る
 let POOL = ALL_POOL.slice();
 const STARTER = [['zan',4],['mamo',4],['ren',1],['sukasu',1]];
+const MIN_DECK = 8;   // 山札は8組より少なくできない（盤面16マスがいつも埋まるように）
 const RAR_NAME = ['ふつう','ちょっと珍しい','レア'];
 
 /* ---------- 敵 ----------
@@ -2912,8 +2913,8 @@ function renderShop(){
       disabled: x.sold || run.gold < p, on:() => { run.gold -= p; x.sold = true; gainRelic(x.id); save(); renderShop(); } });
   });
   const rp = Math.round((60 + run.removes * 25) * pm);
-  items.push({ html:`<div class="mini" style="--k:#3b3631">捨</div><div><div class="nm">札を1組捨てる</div><div class="ds">山札を軽くする（店ごとに1回）</div></div><span class="price">${sh.removed ? '済' : '銭' + rp}</span>`,
-    disabled: sh.removed || run.gold < rp || run.deck.length <= 4,
+  items.push({ html:`<div class="mini" style="--k:#3b3631">捨</div><div><div class="nm">札を1組捨てる</div><div class="ds">${run.deck.length <= MIN_DECK ? `山札は${MIN_DECK}組より少なくできない` : '山札を軽くする（店ごとに1回）'}</div></div><span class="price">${sh.removed ? '済' : '銭' + rp}</span>`,
+    disabled: sh.removed || run.gold < rp || run.deck.length <= MIN_DECK,
     on:() => deckPicker('捨てる札', () => true, e => { run.deck.splice(run.deck.indexOf(e), 1); run.gold -= rp; run.removes++; sh.removed = true; save(); renderShop(); }, renderShop) });
   chooser({ title:'店', sub:`所持 銭${run.gold}`, items, btn:{ label:'店を出る', on:enterMap } });
 }
@@ -2927,7 +2928,7 @@ const EVENTS = [
     ch:[ ['HP8を捧げる', () => run.hp > 8, () => { run.hp -= 8; const [id] = relicChoices(1, false); if (id){ gainRelic(id); return `お守り「${RELICS[id].n}」を授かった`; } return '何も起きなかった'; }],
          ['立ち去る', () => true, () => '何事もなかった'] ] },
   { t:'札の泉', d:'澄んだ泉。札を浸すと何かが起きそうだ。',
-    ch:[ ['札を1組沈める（捨てる）', () => run.deck.length > 4, () => 'pickRemove'],
+    ch:[ ['札を1組沈める（捨てる）', () => run.deck.length > MIN_DECK, () => 'pickRemove'],
          ['札を1組清める（強化）', () => run.deck.some(e => !e.u), () => 'pickUpgrade'] ] },
   { t:'賭場', d:'「銭20張って、丁か半か！」',
     ch:[ ['銭20を賭ける', () => run.gold >= 20, () => { const { r, done } = rrng(); const win = r.next() < .5; done(); run.gold += win ? 30 : -20; return win ? '当たり！ 銭+30' : 'はずれ… 銭-20'; }],
