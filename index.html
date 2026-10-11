@@ -2845,6 +2845,7 @@ function endRun(win){
         ${cell(S.maxCombo, '最大連続')}${cell(S.fevers, '百鬼夜行')}${cell(`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`, '戦闘時間')}
       </div>
       ${meta.maxAsc > prevMaxAsc ? `<div class="res-note">闇${meta.maxAsc} に挑めるようになった</div>` : ''}
+      ${win && r.asc >= ASC.length - 1 ? `<div class="res-note">果てなき夜（エンドレス）に挑戦しよう！</div>` : ''}
       ${r.endless && meta.endBest && meta.endBest.floor === r.floor && (!prevEnd || prevEnd.floor < r.floor) ? `<div class="res-note">果てなき夜の新記録</div>` : ''}
       <button class="btn sub sharebtn" data-share="1">結果をシェア</button>
       <div class="res-sec">${items.length ? '新しく解放' : (after < UNLOCKS.length ? `次の解放まで あと${UNLOCK_STEP - meta.pts % UNLOCK_STEP}` : 'すべて解放済み')}</div>
