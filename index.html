@@ -101,6 +101,15 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .ascsel b{font-family:var(--mincho);color:var(--shu);min-width:calc(var(--u)*30);text-align:center}
 .ascsel button{width:calc(var(--u)*10);height:calc(var(--u)*10);border-radius:50%;background:var(--panel);border:1px solid var(--line);font-size:calc(var(--u)*4)}
 .ascdesc{color:var(--sub);font-size:calc(var(--u)*3);text-align:center;line-height:1.5;min-height:3em;font-weight:500}
+/* 闇の効果：1つずつ枠に分けて2列に。頭の丸はその効果が加わる闇。今の闇で加わった効果は朱 */
+.ascgrid{display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--u)*1) calc(var(--u)*1.4);width:calc(var(--u)*90);text-align:left}
+.ascgrid div{display:flex;align-items:center;gap:calc(var(--u)*1.2);padding:calc(var(--u)*.8) calc(var(--u)*1.2);border-radius:calc(var(--u)*.8);
+  background:var(--panel);border:1px solid var(--line);font-size:calc(var(--u)*2.9);line-height:1.3;color:var(--sub)}
+.ascgrid b{flex:none;display:flex;align-items:center;justify-content:center;width:calc(var(--u)*4.2);height:calc(var(--u)*4.2);border-radius:50%;
+  background:#2e2b38;color:var(--ink);font-size:calc(var(--u)*2.5);font-weight:900;font-variant-numeric:tabular-nums}
+.ascgrid .new{border-color:var(--shu);color:var(--ink)}
+.ascgrid .new b{background:var(--shu);color:var(--paper)}
+.ascgrid div:last-child:nth-child(odd){grid-column:1/-1;justify-content:center}   /* 奇数個のときは最後（今の闇で加わった効果）を横いっぱいに */
 .rsub b{color:var(--kin)}
 .heat{display:inline-block;font-family:var(--mincho);font-size:calc(var(--u)*6);color:var(--shu);font-weight:900;margin-bottom:calc(var(--u)*1)}
 .heat b{color:var(--shu);font-size:1.3em}
@@ -759,7 +768,7 @@ const FEVER_MS = 4000;
 const REFILL_MS = 420;
 const PLAYER_HP = 60;
 // 版：公開するたびに変える（ホーム画面のアプリは開きっぱなしで古い版のまま動くことがあるので、新しい版があれば読み込み直す）
-const BUILD = '2026-10-11.2';
+const BUILD = '2026-10-11.3';
 const SAVE_KEY = 'hyakki-mekuri.v1';
 const OLD_SAVE_KEY = 'dopa-mekuri.v1'; // 旧名のころの保存（読み込みのみ）
 
@@ -3496,8 +3505,16 @@ renderVol();
 $('#btnCards').addEventListener('click', () => showDex());
 function renderAsc(){
   $('#ascNum').textContent = ui.asc ? `闇 ${ui.asc}` : '宵の口';
-  $('#ascDesc').textContent = ui.asc ? ASC.slice(1, ui.asc + 1).join('／') : 'ふつうの難しさ（夜明けを迎えるたびに夜が深くなる）';
-  wrapJP($('#ascDesc'));
+  const el = $('#ascDesc');
+  if (ui.asc){
+    // 闇1〜今の闇までの効果がすべて重なる。1つずつ枠に分け、今の闇で加わった効果だけ朱にする
+    el.className = 'ascgrid';
+    el.innerHTML = ASC.slice(1, ui.asc + 1).map((t, i) => `<div class="${i + 1 === ui.asc ? 'new' : ''}"><b>${i + 1}</b><span>${t}</span></div>`).join('');
+  } else {
+    el.className = 'ascdesc';
+    el.textContent = 'ふつうの難しさ（夜明けを迎えるたびに夜が深くなる）';
+  }
+  wrapJP(el);
 }
 $('#ascDn').addEventListener('click', () => { ui.asc = Math.max(0, ui.asc - 1); renderAsc(); });
 $('#ascUp').addEventListener('click', () => { ui.asc = Math.min(loadMeta().maxAsc, ui.asc + 1); renderAsc(); });
