@@ -3194,11 +3194,11 @@ function showMove(){
   chooser({ info:true, scrollAll:true, title:'引き継ぎ',
     sub:`記録・解放・図鑑・つづきの周回を、コードで別の場所に移せます（音や操作の設定は移りません）。
       <ol><li>元の場所で「コードをコピー」</li><li>移したい場所（ホーム画面のアプリ・ほかの端末）で、下の欄に貼り付けて「コードを読み込む」</li></ol>
-      <textarea class="movebox" id="moveIn" placeholder="ここにコードを貼り付け" spellcheck="false" autocomplete="off"></textarea>`,
+      <textarea class="movebox" id="moveIn" placeholder="ここにコードを貼り付け" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>`,
     items:[
       { html:'<div class="mini info" style="--k:#2c4a6e"><span class="mk">写</span></div><div><div class="nm">コードをコピー</div><div class="ds">この場所の記録をコードにしてコピーする</div></div>',
         on:() => toast(copyText(exportCode()) ? 'コードをコピーしました。移したい場所で貼り付けてください' : 'コピーできませんでした') },
-      { cls:'danger', html:'<div class="mini info" style="--k:#a8321f"><span class="mk">読</span></div><div><div class="nm">コードを読み込む</div><div class="ds">上の欄に貼り付けてから押す（確認があります）</div></div>',
+      { cls:'danger', html:'<div class="mini info" style="--k:#a8321f"><span class="mk">読</span></div><div><div class="nm">コードを読み込む</div><div class="ds">上の欄に貼り付けてから押す<br>（確認があります）</div></div>',
         on:() => confirmImport($('#moveIn').value) },
     ],
     btn:{ label:'もどる', on:showRecords } });
@@ -3207,7 +3207,14 @@ function showMove(){
 function confirmImport(code){
   ui.moveCode = code;
   const d = parseCode(code);
-  if (!d) return toast('コードが読み取れませんでした。コピーした文字を全部貼り付けてください');
+  if (!d){
+    const t = (code || '').trim();
+    if (!t) return toast('欄が空です。コピーしたコードを貼り付けてください');
+    const head = t.replace(/\s+/g, ' ').slice(0, 14);
+    return toast(t.replace(/\s+/g, '').startsWith(MOVE_HEAD)
+      ? 'コードが途中で切れているようです。コピーし直して、全部貼り付けてください'
+      : `引き継ぎのコードではありません（貼り付けた文字の先頭：「${head}…」）。元の場所で「コードをコピー」し直してください`);
+  }
   const m = Object.assign({ runs:0, wins:0, best:0 }, d.meta);
   chooser({ info:true, title:'コードを読み込む',
     sub:`コードの中身：遊んだ回数 ${m.runs}・夜明け ${m.wins}回・最高得点 ${m.best}${d.run ? '・つづきの周回あり' : ''}<br><b>今のこの場所の記録は上書きされ、元には戻せません。</b>`,
@@ -3265,17 +3272,29 @@ const shareText = () => ui.share + '\n#百鬼めくり';
 // その場で（同期で）コピーする。すぐ別のアプリに切り替わっても、コピーは先に終わっている
 function copyNow(){ return copyText(shareText() + '\n' + SHARE_URL); }
 function copyText(text){
+  // その場で（同期で）コピーする。iPhone は読み取り専用の欄では文字が選ばれないので、一時的に書ける欄にして範囲ごと選ぶ
   const ta = document.createElement('textarea');
   ta.value = text;
-  ta.readOnly = true;   // スマホでキーボードを出さない
+  ta.setAttribute('autocomplete', 'off');
   ta.style.cssText = 'position:fixed;left:-9999px;top:0;font-size:16px;user-select:text;-webkit-user-select:text';
   document.body.appendChild(ta);
-  ta.select();
-  ta.setSelectionRange(0, text.length);
   let ok = false;
-  try { ok = document.execCommand('copy'); } catch(e){}
+  try {
+    ta.contentEditable = 'true';
+    ta.readOnly = false;
+    const r = document.createRange();
+    r.selectNodeContents(ta);
+    const sel = getSelection();
+    sel.removeAllRanges(); sel.addRange(r);
+    ta.setSelectionRange(0, text.length);
+    ta.select();
+    ok = document.execCommand('copy');
+    sel.removeAllRanges();
+  } catch(e){}
   ta.remove();
-  if (!ok) try { navigator.clipboard.writeText(text).catch(() => {}); ok = true; } catch(e){}
+  // ブラウザのコピー機能でも書き込む（どちらかが効けばよい）
+  try { if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).catch(() => {}); ok = true; } } catch(e){}
+  if (document.activeElement && document.activeElement !== document.body) try { document.activeElement.blur(); } catch(e){}
   return ok;
 }
 /* ---------- シェア用の画像 ----------
