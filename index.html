@@ -435,10 +435,16 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
 .pick[disabled]{opacity:.4}
 .pick.danger{border-color:#7a2c20}
 .pick.danger .nm{color:#e0705a}
-.resetbtn{width:100%;margin:calc(var(--u)*2) 0 calc(var(--u)*1.6);padding:calc(var(--u)*1.4) calc(var(--u)*2.4);gap:calc(var(--u)*2.4);text-align:left}
-.resetbtn .mini{width:calc(var(--u)*9);height:calc(var(--u)*9);font-size:calc(var(--u)*4.6)}
-.resetbtn .nm{font-size:calc(var(--u)*3.8)}
-.resetbtn .ds{margin-top:calc(var(--u)*.3);font-size:calc(var(--u)*2.9);line-height:1.35}
+.recbtn{width:100%;margin:calc(var(--u)*2) 0 calc(var(--u)*1.6);padding:calc(var(--u)*1.4) calc(var(--u)*2.4);gap:calc(var(--u)*2.4);text-align:left}
+.recbtn + .recbtn{margin-top:0}
+.recbtn .mini{width:calc(var(--u)*9);height:calc(var(--u)*9);font-size:calc(var(--u)*4.6)}
+.recbtn .nm{font-size:calc(var(--u)*3.8)}
+.recbtn .ds{margin-top:calc(var(--u)*.3);font-size:calc(var(--u)*2.9);line-height:1.35}
+/* 引き継ぎ：コードを貼り付ける欄 */
+.movebox{width:100%;height:calc(var(--u)*24);margin-top:calc(var(--u)*2);padding:calc(var(--u)*2);border-radius:calc(var(--u)*1.2);
+  background:var(--panel);border:1px solid var(--line);color:var(--ink);font:16px/1.4 ui-monospace,Menlo,Consolas,monospace;resize:none;
+  user-select:text;-webkit-user-select:text;-webkit-touch-callout:default;word-break:break-all}
+.rsub ol{text-align:left;margin:calc(var(--u)*1.6) 0 0 1.4em;line-height:1.6}
 .pick > div:last-of-type{flex:1;min-width:0}
 /* 札の見本（戦闘の札と同じ見た目） */
 .mini{flex:none;width:calc(var(--u)*13);height:calc(var(--u)*13);border-radius:calc(var(--u)*1.2);display:flex;align-items:center;justify-content:center;
@@ -1542,7 +1548,7 @@ function kback(){
   if ($('#choose').classList.contains('on') && vis(b) && /もどる|店を出る/.test(b.textContent)) b.click();
 }
 document.addEventListener('keydown', e => {
-  if (e.target.closest && e.target.closest('input')) return;
+  if (e.target.closest && e.target.closest('input, textarea')) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   sfxInit();
   document.body.classList.add('kbd');
@@ -3151,7 +3157,8 @@ function showRecords(){
       ${cell(eb ? `第${eb.act}幕 ${eb.floor}階` : '―', '果てなき夜の最高到達', 'wide')}
     </div>
     ${m.runs ? shareRow('記録を共有') : ''}
-    <button class="pick danger resetbtn" data-reset="1"><div class="mini info" style="--k:#3a2622"><span class="mk">消</span></div><div><div class="nm">データを全部消す</div><div class="ds">最初に遊んだときの状態に戻す<br>（確認があります）</div></div></button>
+    <button class="pick recbtn" data-move="1"><div class="mini info" style="--k:#2c4a6e"><span class="mk">移</span></div><div><div class="nm">引き継ぎ</div><div class="ds">ホーム画面のアプリやほかの端末へ<br>記録をコードで移す</div></div></button>
+    <button class="pick danger recbtn" data-reset="1"><div class="mini info" style="--k:#3a2622"><span class="mk">消</span></div><div><div class="nm">データを全部消す</div><div class="ds">最初に遊んだときの状態に戻す<br>（確認があります）</div></div></button>
     <div class="res-sec">${m.hist.length ? '最近の記録' : 'まだ記録がありません'}</div>`;
   ui.share = `百鬼めくりの記録：夜明け${m.wins}回・最高得点${m.best}・最大${m.bestCombo}連${eb ? `・果てなき夜 第${eb.act}幕${eb.floor}階` : ''}`;
   prepCard({ head:'記録', reach: m.maxAsc ? `闇${m.maxAsc} に挑める` : '宵の口（ふつうの難しさ）', big:`${m.wins}`, unit:'回', bigLabel:'夜明け',
@@ -3164,6 +3171,71 @@ function showRecords(){
       + `<div class="ds">${fmtDate(h.d)}　得点${h.score}・最大${h.combo}連・${h.deg}℃</div></div>` })),
     btn:{ label:'もどる', on:enterTitle } });
 }
+/* ---------- 引き継ぎ ----------
+   保存（記録・解放・図鑑・つづきの周回）を文字のコードにして、別の場所に移す。
+   iPhone はホーム画面に追加したアプリとブラウザで保存場所が別なので、その間を移すのに使う（機種変更にも）。設定（音・操作）は移さない */
+const MOVE_HEAD = 'HYAKKI1:';
+function exportCode(){
+  const bytes = new TextEncoder().encode(JSON.stringify(loadSave()));
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  return MOVE_HEAD + btoa(bin);
+}
+function parseCode(code){
+  try {
+    const t = (code || '').replace(/\s+/g, '');
+    if (!t.startsWith(MOVE_HEAD)) return null;
+    const bin = atob(t.slice(MOVE_HEAD.length));
+    const d = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0))));
+    return d && typeof d === 'object' && d.meta && typeof d.meta === 'object' ? d : null;
+  } catch(e){ return null; }
+}
+function showMove(){
+  chooser({ info:true, scrollAll:true, title:'引き継ぎ',
+    sub:`記録・解放・図鑑・つづきの周回を、コードで別の場所に移せます（音や操作の設定は移りません）。
+      <ol><li>元の場所で「コードをコピー」</li><li>移したい場所（ホーム画面のアプリ・ほかの端末）で、下の欄に貼り付けて「コードを読み込む」</li></ol>
+      <textarea class="movebox" id="moveIn" placeholder="ここにコードを貼り付け" spellcheck="false" autocomplete="off"></textarea>`,
+    items:[
+      { html:'<div class="mini info" style="--k:#2c4a6e"><span class="mk">写</span></div><div><div class="nm">コードをコピー</div><div class="ds">この場所の記録をコードにしてコピーする</div></div>',
+        on:() => toast(copyText(exportCode()) ? 'コードをコピーしました。移したい場所で貼り付けてください' : 'コピーできませんでした') },
+      { cls:'danger', html:'<div class="mini info" style="--k:#a8321f"><span class="mk">読</span></div><div><div class="nm">コードを読み込む</div><div class="ds">上の欄に貼り付けてから押す（確認があります）</div></div>',
+        on:() => confirmImport($('#moveIn').value) },
+    ],
+    btn:{ label:'もどる', on:showRecords } });
+  if (ui.moveCode) $('#moveIn').value = ui.moveCode;
+}
+function confirmImport(code){
+  ui.moveCode = code;
+  const d = parseCode(code);
+  if (!d) return toast('コードが読み取れませんでした。コピーした文字を全部貼り付けてください');
+  const m = Object.assign({ runs:0, wins:0, best:0 }, d.meta);
+  chooser({ info:true, title:'コードを読み込む',
+    sub:`コードの中身：遊んだ回数 ${m.runs}・夜明け ${m.wins}回・最高得点 ${m.best}${d.run ? '・つづきの周回あり' : ''}<br><b>今のこの場所の記録は上書きされ、元には戻せません。</b>`,
+    items:[{ cls:'danger', html:'<div class="mini info" style="--k:#a8321f"><span class="mk">読</span></div><div><div class="nm">読み込む</div><div class="ds">押すとすぐ入れ替わります</div></div>',
+      on:() => { writeSave({ meta:d.meta, run:d.run || null }); location.reload(); } }],
+    btn:{ label:'もどる', on:showMove }, guard:true });
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-move]')){ sfx('ui'); ui.moveCode = ''; showMove(); } });
+
+/* ---------- ホーム画面に追加の案内（iPhone だけ、一度だけ） ----------
+   iPhone はホーム画面に追加したアプリとブラウザで保存場所が別で、記録が引き継がれないため */
+const A2HS_KEY = 'hyakki-mekuri.a2hs';
+function a2hsNotice(){
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (!ios) return false;
+  try { if (localStorage.getItem(A2HS_KEY)) return false; localStorage.setItem(A2HS_KEY, '1'); } catch(e){ return false; }
+  const app = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  if (app && loadMeta().runs) return false;   // ホーム画面のアプリで、もう遊んでいる
+  chooser({ info:true, title: app ? '記録の引き継ぎ' : 'ホーム画面に追加',
+    sub: app
+      ? 'ブラウザで遊んだ記録は、ホーム画面のアプリには引き継がれません。<br>ブラウザで「記録」→「引き継ぎ」→「コードをコピー」して、こちらの「記録」→「引き継ぎ」で貼り付けると移せます。'
+      : `ホーム画面に追加すると、ブラウザのバーなしで遊べます。
+        <ol><li>ブラウザの「共有」ボタンを押す（見当たらなければ「…」の中）</li><li>「ホーム画面に追加」を選ぶ</li></ol>
+        <b>iPhone ではブラウザの記録はホーム画面のアプリに引き継がれないので、追加するなら最初がおすすめです。</b><br>もう遊んだ記録は「記録」→「引き継ぎ」で移せます。`,
+    items:[], btn:{ label:'わかった', on:enterTitle } });
+  return true;
+}
+
 /* ---------- 完全リセット ----------
    記録・解放・図鑑・続きの周回と、設定（音・音量・キー配置・操作）を全部消して読み込み直す */
 function confirmReset(){
@@ -3191,8 +3263,8 @@ function shareRow(label){
 }
 const shareText = () => ui.share + '\n#百鬼めくり';
 // その場で（同期で）コピーする。すぐ別のアプリに切り替わっても、コピーは先に終わっている
-function copyNow(){
-  const text = shareText() + '\n' + SHARE_URL;
+function copyNow(){ return copyText(shareText() + '\n' + SHARE_URL); }
+function copyText(text){
   const ta = document.createElement('textarea');
   ta.value = text;
   ta.readOnly = true;   // スマホでキーボードを出さない
@@ -3298,6 +3370,7 @@ const HOWTO = [
   ['輪', '#2c5aa0', '敵の動き', '舞台の右にいるのが、祓う相手の物の怪（敵）。盤面の上の帯：左が敵の次の行動と敵のHP、真ん中の輪が一周すると敵が動く、右が自分のHPと防御。防御は敵が動くと消えるので、攻撃の直前に「守」をそろえるのがコツ。'],
   ['道', '#3c8a48', '夜道を進む', '敵を退散させると銭と札1組がもらえる。マップを下から上へ進む：戦（戦闘）・強（強敵、お守りがもらえる）・休（回復か札の強化）・店・？（できごと）・宝（お守り）。'],
   ['主', '#c4412b', '幕の主と夜明け', '各幕の一番上に「幕の主」が待つ。祓うと次の幕へ。三幕を越えると夜明け。夜明けを迎えるたびに、もっと深い夜（闇）に挑める。'],
+  ['家', '#4a4658', 'ホーム画面に追加', 'スマホはブラウザの共有メニューから「ホーム画面に追加」すると、ブラウザのバーなしで遊べる。iPhone ではブラウザの記録が引き継がれないので、「記録」→「引き継ぎ」のコードで移す。'],
   ['巡', '#6a5aa8', 'くり返し遊ぶ', '力尽きても、進んだ分だけ経験がたまり、新しい札やお守りが解放される。周回は自動で保存され、「つづきから」で戦闘の途中からでも再開できる。'],
 ];
 function showHowto(){
@@ -3401,6 +3474,7 @@ $('#ascUp').addEventListener('click', () => { ui.asc = Math.min(loadMeta().maxAs
 // 最初から書いてある説明文にも目印を入れる
 document.querySelectorAll('.title-note, .logo-sub, .ovnote').forEach(wrapJP);
 enterTitle();
+a2hsNotice();
 // 拡大させない。iPhone（Safari も Chrome も中身は同じ）は user-scalable=no を無視するので、二本指の操作そのものを止める
 document.addEventListener('dblclick', e => e.preventDefault());
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive:false }));
