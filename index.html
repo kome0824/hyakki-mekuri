@@ -775,7 +775,7 @@ const FEVER_MS = 4000;
 const REFILL_MS = 420;
 const PLAYER_HP = 60;
 // 版：公開するたびに変える（ホーム画面のアプリは開きっぱなしで古い版のまま動くことがあるので、新しい版があれば読み込み直す）
-const BUILD = '2026-10-11.6';
+const BUILD = '2026-10-11.7';
 const SAVE_KEY = 'hyakki-mekuri.v1';
 const OLD_SAVE_KEY = 'dopa-mekuri.v1'; // 旧名のころの保存（読み込みのみ）
 
@@ -818,7 +818,9 @@ function rrng(){ const r = makeRng(run.rs); return { r, done(){ run.rs = r.s; } 
 /* ---------- 保存 ---------- */
 function loadSave(){ try { return JSON.parse(localStorage.getItem(SAVE_KEY) || localStorage.getItem(OLD_SAVE_KEY)) || {}; } catch(e){ return {}; } }
 function writeSave(d){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch(e){} }
-function save(){ const d = loadSave(); d.run = run; writeSave(d); }
+// つづきは通常（run）と果てなき夜（runE）で別々に持つ。どちらかを始めても、もう片方のつづきは消えない
+const slotOf = r => r && r.endless ? 'runE' : 'run';
+function save(){ const d = loadSave(); d[slotOf(run)] = run; writeSave(d); }
 
 /* ---------- 戦闘 ---------- */
 function startBattle(foeId){
@@ -2929,7 +2931,7 @@ function endRun(win){
   const prevEnd = meta.endBest;
   if (r.endless && (!prevEnd || r.floor > prevEnd.floor)) meta.endBest = { act:r.act, floor:r.floor, score, asc:r.asc };
   d.meta = meta;
-  d.run = null;
+  d[slotOf(r)] = null;
   writeSave(d);
   run = null;
   applyUnlocks();
@@ -3127,11 +3129,11 @@ async function checkUpdate(){
 window.addEventListener('pagehide', () => snapBattle());
 
 $('#btnNew').addEventListener('click', () => {
-  if (loadSave().run && !confirmNew('#btnNew')) return;
+  if (loadSave().run && !confirmNew('#btnNew')) return;   // 通常のつづきがあるときだけ確認
   newRun(false);
 });
 $('#btnEndless').addEventListener('click', () => {
-  if (loadSave().run && !confirmNew('#btnEndless')) return;
+  if (loadSave().runE && !confirmNew('#btnEndless')) return;   // 果てなき夜のつづきがあるときだけ確認
   newRun(true);
 });
 // 続きのデータがあるときは2回押しで上書き
@@ -3140,22 +3142,30 @@ function confirmNew(id){
   if (newArmed === id) return true;
   newArmed = id;
   const el = $(id), html = el.innerHTML;
-  if (el.classList.contains('endbtn')) el.innerHTML = '本当に新しく始める？<small>もう一度押すと、つづきは消える</small>';
+  if (el.classList.contains('endbtn')) el.innerHTML = '本当に新しく始める？<small>もう一度押すと、果てなき夜のつづきは消える</small>';
   else el.textContent = '本当に新しく始める？';
   setTimeout(() => { if (newArmed === id) newArmed = null; el.innerHTML = html; }, 2500);
   return false;
 }
 $('#btnCont').addEventListener('click', () => {
-  const d = loadSave();
-  if (!d.run) return;
-  run = d.run;
+  const d = loadSave(), rs = [d.run, d.runE].filter(Boolean);
+  if (!rs.length) return;
+  if (rs.length === 1) return resumeRun(rs[0]);
+  // 通常と果てなき夜の両方あるときは選ぶ
+  chooser({ info:true, title:'つづきから', sub:'どちらを再開しますか',
+    items: rs.map(r => ({ html:`<div class="mini info" style="--k:${r.endless ? '#6a5aa8' : '#2c4a6e'}"><span class="mk">${r.endless ? '果' : '続'}</span></div>`
+      + `<div><div class="nm">${r.endless ? '果てなき夜' : 'ふつうの夜'}</div><div class="ds">${contDesc(r, true)}</div></div>`, on:() => resumeRun(r) })),
+    btn:{ label:'もどる', on:enterTitle } });
+});
+function resumeRun(r){
+  run = r;
   const pd = run.pending;
   if (pd && pd.won) return afterWin();          // 倒した直後に閉じた → 報酬から
   if (pd && pd.lost) return gameOver();         // 負けた直後に閉じた → 結果から
   if (pd && run.battle) return resumeBattle(run.battle);
   if (pd) return startBattle(pd.foe);           // 途中保存の無い古いデータ
   enterMap();
-});
+}
 // 山札はどの画面からでも見られる。「もどる」で元の画面へ
 // 山札・お守りの一覧はどの画面からでも見られる。「もどる」で元の画面へ
 function openSide(fn){
@@ -3183,15 +3193,17 @@ function enterTitle(){
   show('title');
 }
 // 「つづきから」はいつも出し、つづきが無いときは押せない形に。下にどこからの続きかを小さく出す
+// 「つづきから」の下の説明：第2幕 11階・闇10・HP 41/54・戦闘中（果てなき夜なら頭に「果てなき夜」）
+function contDesc(r, noMode){
+  const pd = r.pending;
+  return `${r.endless && !noMode ? '果てなき夜 ' : ''}第${r.act}幕 ${r.floor}階${r.asc ? '・闇' + r.asc : ''}・HP ${r.hp}/${r.maxHp}`
+    + (pd && pd.won ? '・勝った直後' : pd && pd.lost ? '・力尽きた直後' : pd ? '・戦闘中' : '');
+}
+// 「つづきから」はいつも出し、つづきが無いときは押せない形に。2つあるときは押すと選ぶ
 function renderCont(){
-  const r = loadSave().run, b = $('#btnCont');
-  b.disabled = !r;
-  let where = '中断した周回はありません';
-  if (r){
-    const pd = r.pending;
-    where = `${r.endless ? '果てなき夜 ' : ''}第${r.act}幕 ${r.floor}階${r.asc ? '・闇' + r.asc : ''}・HP ${r.hp}/${r.maxHp}`
-      + (pd && pd.won ? '・勝った直後' : pd && pd.lost ? '・力尽きた直後' : pd ? '・戦闘中' : '');
-  }
+  const d = loadSave(), rs = [d.run, d.runE].filter(Boolean), b = $('#btnCont');
+  b.disabled = !rs.length;
+  const where = !rs.length ? '中断した周回はありません' : rs.length === 2 ? 'ふつうの夜と果てなき夜、2つあり' : contDesc(rs[0]);
   b.innerHTML = `つづきから<small${where.length > 24 ? ' class="long"' : ''}>${where}</small>`;
 }
 /* ---------- 記録 ---------- */
@@ -3268,9 +3280,9 @@ function confirmImport(code){
   }
   const m = Object.assign({ runs:0, wins:0, best:0 }, d.meta);
   chooser({ info:true, title:'コードを読み込む',
-    sub:`コードの中身：遊んだ回数 ${m.runs}・夜明け ${m.wins}回・最高得点 ${m.best}${d.run ? '・つづきの周回あり' : ''}<br><b>今のこの場所の記録は上書きされ、元には戻せません。</b>`,
+    sub:`コードの中身：遊んだ回数 ${m.runs}・夜明け ${m.wins}回・最高得点 ${m.best}${d.run || d.runE ? `・つづき ${[d.run, d.runE].filter(Boolean).map(r => r.endless ? '果てなき夜' : 'ふつうの夜').join('と')}` : ''}<br><b>今のこの場所の記録は上書きされ、元には戻せません。</b>`,
     items:[{ cls:'danger', html:'<div class="mini info" style="--k:#a8321f"><span class="mk">読</span></div><div><div class="nm">読み込む</div><div class="ds">押すとすぐ入れ替わります</div></div>',
-      on:() => { writeSave({ meta:d.meta, run:d.run || null }); location.reload(); } }],
+      on:() => { writeSave({ meta:d.meta, run:d.run || null, runE:d.runE || null }); location.reload(); } }],   // 前の形（果てなき夜も run）は開いたときに移す
     btn:{ label:'もどる', on:showMove }, guard:true });
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-move]')){ sfx('ui'); ui.moveCode = ''; showMove(); } });
@@ -3542,15 +3554,18 @@ $('#ascDn').addEventListener('click', () => { ui.asc = Math.max(0, ui.asc - 1); 
 $('#ascUp').addEventListener('click', () => { ui.asc = Math.min(loadMeta().maxAsc, ui.asc + 1); renderAsc(); });
 // 図鑑ができる前から続いている周回は、今持っているお守りと戦っている妖怪を図鑑に入れておく
 (() => {
-  const d = loadSave(), r = d.run;
-  if (!r) return;
+  const d = loadSave();
+  // 前はつづきが1つだけで、果てなき夜も run に入っていた。果てなき夜の場所が空なら移す
+  if (d.run && d.run.endless && !d.runE){ d.runE = d.run; d.run = null; writeSave(d); }
+  [d.run, d.runE].filter(Boolean).forEach(r => {
   const meta = loadMeta(), dx = meta.dex;
   dx.r = dx.r || {}; dx.f = dx.f || {};
   let ch = false;
   (r.relics || []).forEach(id => { if (RELICS[id] && !dx.r[id]){ dx.r[id] = 1; ch = true; } });
   const fid = r.battle && r.battle.foeId;
   if (FOES[fid] && !dx.f[fid]){ dx.f[fid] = [1, 0]; ch = true; }
-  if (ch){ d.meta = meta; writeSave(d); }
+  if (ch){ const d2 = loadSave(); d2.meta = meta; writeSave(d2); }
+  });
 })();
 // 最初から書いてある説明文にも目印を入れる
 document.querySelectorAll('.title-note, .logo-sub, .ovnote').forEach(wrapJP);
