@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#17161d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="百鬼めくり">
 <title>百鬼めくり</title>
 <style>
 /* 縦画面1枚。375×667 を 100×177.9 単位(--u)で組む
@@ -11,7 +14,10 @@
    グラデーションや光彩は使わず、平らな面と細い線で組む。見出しと札の字は明朝。 */
 :root{
   color-scheme:dark;
-  --u: min(1vw, 0.5622vh);
+  /* 下に少し余白を空ける（ブラウザ下側のボタンやホームバーを押してしまわないように）。上はホーム画面から開いたときのノッチ分 */
+  --sat: env(safe-area-inset-top, 0px);
+  --gapb: max(env(safe-area-inset-bottom, 0px), 14px);
+  --u: min(1vw, calc((100vh - var(--sat) - var(--gapb)) * 0.005622));
   --bg:#17161d;      /* 墨の夜 */
   --bg2:#1f1d26;
   --panel:#24222c;   /* 面 */
@@ -29,12 +35,12 @@
   --font:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Noto Sans CJK JP","Yu Gothic",sans-serif;
   --mincho:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP","Noto Serif CJK JP",serif;
 }
-@supports (height:1dvh){ :root{ --u: min(1vw, 0.5622dvh); } }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+@supports (height:1dvh){ :root{ --u: min(1vw, calc((100dvh - var(--sat) - var(--gapb)) * 0.005622)); } }
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:pan-x pan-y}
 html,body{height:100%;background:var(--bg);color:var(--ink);overflow:hidden;font-family:var(--font);font-weight:700;
-  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-x pan-y;overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}
-body{display:flex;align-items:center;justify-content:center;background:var(--bg)}
+body{display:flex;align-items:center;justify-content:center;padding:var(--sat) 0 var(--gapb);background:var(--bg)}
 #app{position:relative;width:calc(var(--u)*100);height:calc(var(--u)*177.9);font-size:calc(var(--u)*4);overflow:hidden}
 .screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center}
 .screen.on{display:flex}
@@ -63,13 +69,27 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .vol{display:flex;flex-direction:column;gap:calc(var(--u)*2.4)}
 .vol label{display:flex;align-items:center;gap:calc(var(--u)*2.4);font-size:calc(var(--u)*3.6)}
 .vol label span{flex:none;width:calc(var(--u)*11);white-space:nowrap}
-.vol input{flex:none;width:calc(var(--u)*38);accent-color:var(--kin)}
+.vol input{flex:none;width:calc(var(--u)*38);accent-color:var(--kin);touch-action:none}
 .vol b{flex:none;width:calc(var(--u)*9);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--sub)}
 .title-links{flex:none;display:flex;justify-content:center;gap:calc(var(--u)*2.4)}
 .title-links .btn{min-width:calc(var(--u)*27);padding:calc(var(--u)*2.2) calc(var(--u)*2);font-size:calc(var(--u)*3.8)}
 .endbtn{padding:calc(var(--u)*2.2) calc(var(--u)*5);font-size:calc(var(--u)*4.4)}
 .endbtn small{display:block;font-size:.62em;color:var(--sub);letter-spacing:.1em;margin-top:calc(var(--u)*.4)}
-.sharebtn{margin:calc(var(--u)*1.6) auto 0;min-width:calc(var(--u)*50);padding:calc(var(--u)*2.4) calc(var(--u)*4);font-size:calc(var(--u)*4.2)}
+.share{margin:calc(var(--u)*1) auto 0;width:calc(var(--u)*88);text-align:center}
+.share-l{font-size:calc(var(--u)*3.2);color:var(--sub);margin-bottom:calc(var(--u)*.8)}
+.share-b{display:flex;justify-content:center;gap:calc(var(--u)*3)}
+.sns{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*.8);width:calc(var(--u)*16);font-size:calc(var(--u)*2.8);font-weight:700;color:var(--sub)}
+.sns i{display:flex;align-items:center;justify-content:center;width:calc(var(--u)*13);height:calc(var(--u)*13);border-radius:50%;background:var(--c)}
+.sns svg{width:56%;height:56%;fill:#fff}
+.sns:active i{transform:scale(.92);filter:brightness(.9)}
+.sns-x{--c:#000}
+.sns-x i{box-shadow:0 0 0 1px #4a4658}
+.sns-x svg{width:48%;height:48%}
+.sns-discord{--c:#5865f2}
+.sns-line{--c:#06c755}
+.sns-line svg{width:62%;height:62%}
+.sns-copy{--c:#8d8a96}
+.sns-copy svg{width:50%;height:50%}
 .rec-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:calc(var(--u)*1.6);width:calc(var(--u)*88)}
 .rec-grid div{padding:calc(var(--u)*2) calc(var(--u)*2);border-radius:calc(var(--u)*1);background:var(--panel);border:1px solid var(--line);text-align:center}
 .rec-grid b{display:block;font-size:calc(var(--u)*5);color:var(--paper);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -197,11 +217,16 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .combo .cbar i{display:block;height:100%;width:0;background:var(--kin)}
 .board{position:relative;display:grid;grid-template-columns:repeat(4,calc(var(--u)*22));grid-template-rows:repeat(4,calc(var(--u)*22));
   gap:calc(var(--u)*1.6);justify-content:center;margin-top:calc(var(--u)*.8);perspective:calc(var(--u)*200)}
-.slot{position:relative;touch-action:manipulation}
+.slot{position:relative}
 /* キーボード操作（PC）：札の左下にキーの印、選んでいるボタンに金の枠 */
 .kh{position:absolute;left:calc(var(--u)*1);bottom:calc(var(--u)*.6);z-index:2;display:none;font-size:calc(var(--u)*2.8);font-weight:900;
   color:rgba(236,227,207,.55);pointer-events:none;font-family:var(--font)}
-body.pc .kh{display:block}
+/* PCでは伏せ札の真ん中に大きくキーを出す（「百」の代わり）。開いている札は左下の印で */
+body.pc .back{font-size:0}
+body.pc .back::before{content:attr(data-k);font-family:var(--font);font-size:calc(var(--u)*9);font-weight:900;color:rgba(236,227,207,.8)}
+body.pc .slot.frozen .back::before{content:none}
+body.pc .slot:is(.open,.peek,.closing) .kh{display:block}
+.kh{padding:0 calc(var(--u)*.8);border-radius:calc(var(--u)*.6);background:rgba(15,14,20,.55);color:var(--paper)}
 .slot.empty .kh{display:none}
 .inpanel{width:calc(var(--u)*92)}
 .inrow{display:flex;align-items:center;gap:calc(var(--u)*1.6);margin-bottom:calc(var(--u)*2)}
@@ -413,6 +438,14 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
 .mini .x2{position:absolute;right:calc(var(--u)*-1.5);bottom:calc(var(--u)*-1.5);font-family:var(--font);font-size:calc(var(--u)*2.8);background:var(--sumi);color:var(--ink);
   border:1px solid var(--line);border-radius:calc(var(--u)*.6);padding:0 calc(var(--u)*1)}
 /* 結果画面 */
+/* 図鑑 */
+.dextabs{display:flex;gap:calc(var(--u)*1.6);width:calc(var(--u)*88);margin:0 auto}
+.dextabs .pausebtn{flex:1;padding:calc(var(--u)*1.8) 0;font-size:calc(var(--u)*3.8)}
+.dexnote{margin-top:calc(var(--u)*1.6);color:var(--sub);font-size:calc(var(--u)*3.4)}
+.mini.dexq{background:var(--panel);color:var(--sub);border:1px dashed var(--sub);box-shadow:none}
+.mini.dexq.boss{border-color:var(--shu)}
+.mini.dexfoe{background:#141620;border:1px solid var(--line);box-shadow:none;padding:calc(var(--u)*1)}
+.mini.dexfoe svg{display:block;width:100%;height:100%}
 #choose.norun{padding-top:calc(var(--u)*7)}
 .res{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*2.6);width:calc(var(--u)*90)}
 .res-reach{font-size:calc(var(--u)*3.8);color:var(--ink)}
@@ -471,7 +504,7 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
     <div class="title-note">札をどんどんめくれ<br>同じ絵柄が2枚開いたら即発動<br>妖怪は待ってくれない</div>
     <!-- 説明は画面の下段に（「はじめる」「つづきから」の近くに置かない） -->
     <div class="tsp"></div>
-    <div class="title-links"><button class="btn sub" id="btnHow">遊び方</button><button class="btn sub" id="btnCards">札の説明</button><button class="btn sub" id="btnRec">記録</button></div>
+    <div class="title-links"><button class="btn sub" id="btnHow">遊び方</button><button class="btn sub" id="btnCards">図鑑</button><button class="btn sub" id="btnRec">記録</button></div>
   </section>
 
   <section id="battle" class="screen">
@@ -673,7 +706,16 @@ const UNLOCKS = [
   ['card','baku'], ['relic','kyoran'], ['card','zen'], ['relic','onime'], ['card','rai'], ['relic','fukutsu'],
 ];
 const UNLOCK_STEP = 12;
-function loadMeta(){ const m = loadSave().meta || {}; return Object.assign({ best:0, runs:0, wins:0, pts:0, maxAsc:0, hist:[], endBest:null, bestCombo:0 }, m); }
+function loadMeta(){ const m = loadSave().meta || {}; return Object.assign({ best:0, runs:0, wins:0, pts:0, maxAsc:0, hist:[], endBest:null, bestCombo:0, dex:{} }, m); }
+// 図鑑：手に入れたお守り（r：回数）と、出会った妖怪（f：[出会った回数, 祓った回数]）。周回をまたいで残す
+function dexNote(kind, id, won){
+  const d = loadSave(), meta = loadMeta();
+  const dx = meta.dex, t = dx[kind] || (dx[kind] = {});
+  if (kind === 'r') t[id] = (t[id] || 0) + 1;
+  else { const v = t[id] || (t[id] = [0, 0]); v[won ? 1 : 0]++; }
+  d.meta = meta;
+  writeSave(d);
+}
 function unlockedCount(meta){ return Math.min(UNLOCKS.length, Math.floor(meta.pts / UNLOCK_STEP)); }
 function applyUnlocks(){
   const n = unlockedCount(loadMeta());
@@ -723,6 +765,7 @@ function newRun(endless){
           rs:hashStr(seed + '|run'), at:-1, path:[], removes:0, lastFoe:null, pending:null, shop:null, bosses:0,
           stats:{ taps:0, matches:0, misses:0, maxCombo:0, fevers:0, ms:0, battles:0 }, endless:!!endless };
   STARTER.forEach(([k, n]) => { for (let i = 0; i < n; i++) run.deck.push({ k, u:0 }); });
+  dexNote('r', 'chishio');
   if (asc(7)) run.deck.push({ k:'noroi', u:0 });
   run.map = genMap(1);
   enterMap();
@@ -767,6 +810,7 @@ function startBattle(foeId){
   };
   for (let i = 0; i < SLOTS; i++) dealTo(i);
   if (hasR('sakiyomi')) B.slots.forEach(sl => { if (sl) sl.peekUntil = 1500; });
+  dexNote('f', foeId);
   showBattle();
   log(`${f.n} があらわれた！`);
   snapBattle();
@@ -851,7 +895,7 @@ function buildBoard(){
   for (let i = 0; i < SLOTS; i++){
     const el = document.createElement('div');
     el.className = 'slot';
-    el.innerHTML = `<div class="card"><div class="face back">百</div><div class="face front"></div></div><span class="kh">${curKeys()[i]}</span>`;
+    el.innerHTML = `<div class="card"><div class="face back" data-k="${curKeys()[i]}">百</div><div class="face front"></div></div><span class="kh">${curKeys()[i]}</span>`;
     el.addEventListener('pointerdown', e => { e.preventDefault(); tap(i); });
     bd.appendChild(el);
   }
@@ -1404,6 +1448,7 @@ function kbDiagram(){
 function renderKeys(){
   document.querySelectorAll('.kbdiag').forEach(el => el.innerHTML = kbDiagram());
   document.querySelectorAll('#board .kh').forEach((el, i) => el.textContent = curKeys()[i]);
+  document.querySelectorAll('#board .back').forEach((el, i) => el.dataset.k = curKeys()[i]);
   document.querySelectorAll('[data-lay]').forEach(b => b.classList.toggle('sel', b.dataset.lay === KEYLAY));
   document.querySelectorAll('[data-inp]').forEach(b => b.classList.toggle('sel', b.dataset.inp === INPUT));
 }
@@ -2243,6 +2288,9 @@ function hurtMe(d, pierce){
 }
 
 /* ---------- 敵の行動 ---------- */
+const INTENT_DEX = { atk:'攻撃', def:'防御', buff:'力をためる', curse:'呪い', freeze:'凍結', shuffle:'かき混ぜ' };
+const INTENT_NOTE = { buff:'攻撃が上がる', curse:'山札に呪の札が混ざる', freeze:'伏せ札が凍って少しの間めくれない', shuffle:'伏せ札の場所が入れ替わる', def:'敵が防御を得る' };
+function intentDex([t, v, n]){ return t === 'atk' ? `攻撃 ${v}${n > 1 ? '×' + n : ''}` : t === 'def' ? `防御 ${v}` : t === 'buff' ? `力をためる +${v}` : t === 'freeze' ? `凍結 ${v}枚` : INTENT_DEX[t]; }
 function curIntent(){ return B.f.it[B.e.step % B.f.it.length]; }
 function foeAct(){
   const [t, v, n] = curIntent(), e = B.e;
@@ -2449,6 +2497,7 @@ function winBattle(){
   run.battle = null;
   if (run.pending) run.pending.won = true;
   save();
+  dexNote('f', B.foeId, true);
   log(`${B.f.n} を退散させた！`);
   $('#foe').classList.add('dead');
   endOverlay('退散!!', `${B.f.n} は闇に消えた`, false);
@@ -2547,6 +2596,7 @@ function goldMul(){ return (hasR('kinun') ? 1.5 : 1) * (hasR('ougon') ? 2 : 1); 
 function gainRelic(id){
   if (run.relics.includes(id)) return;
   run.relics.push(id);
+  dexNote('r', id);
   const loseMax = { ougon:10, odaiko:8, gouka:6 }[id];
   if (loseMax){ run.maxHp -= loseMax; run.hp = Math.min(run.hp, run.maxHp); }
   if (id === 'jusou') run.deck.push({ k:'noroi', u:0 });
@@ -2848,7 +2898,7 @@ function endRun(win){
       ${meta.maxAsc > prevMaxAsc ? `<div class="res-note">闇${meta.maxAsc} に挑めるようになった</div>` : ''}
       ${win && r.asc >= ASC.length - 1 ? `<div class="res-note">果てなき夜（エンドレス）に挑戦しよう！</div>` : ''}
       ${r.endless && meta.endBest && meta.endBest.floor === r.floor && (!prevEnd || prevEnd.floor < r.floor) ? `<div class="res-note">果てなき夜の新記録</div>` : ''}
-      <button class="btn sub sharebtn" data-share="1">結果をシェア</button>
+      ${shareRow('結果をシェア')}
       <div class="res-sec">${items.length ? '新しく解放' : (after < UNLOCKS.length ? `次の解放まで あと${UNLOCK_STEP - meta.pts % UNLOCK_STEP}` : 'すべて解放済み')}</div>
     </div>`;
   ui.share = `百鬼めくりで${win ? '三幕を越えて夜明けを迎えた！' : `${r.endless ? '果てなき夜の' : ''}第${r.act}幕 ${r.floor}階まで進んだ`}${r.asc ? `（闇${r.asc}）` : ''}\n得点${score}・最大${S.maxCombo}連・めくり熱${dg.deg}℃「${dg.name}」`;
@@ -3062,7 +3112,7 @@ function showRecords(){
       ${cell(m.maxAsc ? `闇${m.maxAsc}` : '宵の口', '挑める難しさ')}${cell(`${unlockedCount(m)}/${UNLOCKS.length}`, '解放')}
       ${cell(eb ? `第${eb.act}幕 ${eb.floor}階` : '―', '果てなき夜の最高到達', 'wide')}
     </div>
-    ${m.runs ? '<button class="btn sub sharebtn" data-share="1">記録をシェア</button>' : ''}
+    ${m.runs ? shareRow('記録をシェア') : ''}
     <div class="res-sec">${m.hist.length ? '最近の記録' : 'まだ記録がありません'}</div>`;
   ui.share = `百鬼めくりの記録：夜明け${m.wins}回・最高得点${m.best}・最大${m.bestCombo}連${eb ? `・果てなき夜 第${eb.act}幕${eb.floor}階` : ''}`;
   chooser({ info:true, title:'記録', sub,
@@ -3072,15 +3122,38 @@ function showRecords(){
     btn:{ label:'もどる', on:enterTitle } });
 }
 $('#btnRec').addEventListener('click', showRecords);
-// シェア：使えれば端末の共有メニュー、だめならコピー、それもだめなら X の投稿画面
+// シェア：丸いアイコンを押すとすぐ投稿の画面へ。Discord は外から文章を入れられないので、文章をコピーしてから開く
+// ロゴの形は Simple Icons（CC0）から
 const SHARE_URL = 'https://kome0824.github.io/hyakki-mekuri/';
-async function shareNow(){
-  const text = ui.share + '\n#百鬼めくり';
-  try { if (navigator.share){ await navigator.share({ title:'百鬼めくり', text, url:SHARE_URL }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
-  try { await navigator.clipboard.writeText(text + '\n' + SHARE_URL); toast('結果をコピーしました。貼り付けてシェアできます'); return; } catch(e){}
-  window.open('https://x.com/intent/post?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(SHARE_URL), '_blank');
+const SNS = [
+  ['x', 'X', '<path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>',
+    (t, u) => `https://x.com/intent/post?text=${t}&url=${u}`],
+  ['discord', 'Discord', '<path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/>',
+    () => 'https://discord.com/app'],
+  ['line', 'LINE', '<path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>',
+    (t, u) => `https://line.me/R/share?text=${t}%0A${u}`],
+  ['copy', 'コピー', '<rect x="4.5" y="4" width="15" height="18" rx="2.2" fill="none" stroke="#fff" stroke-width="2.2"/><rect x="8" y="1.8" width="8" height="4.4" rx="1.2" fill="#8d8a96" stroke="#fff" stroke-width="2"/>', null],
+];
+function shareRow(label){
+  return `<div class="share"><div class="share-l">${label}</div><div class="share-b">`
+    + SNS.map(([k, n, svg]) => `<button class="sns sns-${k}" data-share="${k}" aria-label="${n}"><i><svg viewBox="0 0 24 24" aria-hidden="true">${svg}</svg></i><span>${n}</span></button>`).join('')
+    + `</div></div>`;
 }
-document.addEventListener('click', e => { if (e.target.closest('[data-share]')) shareNow(); });
+const shareText = () => ui.share + '\n#百鬼めくり';
+async function copyShare(msg){
+  try { await navigator.clipboard.writeText(shareText() + '\n' + SHARE_URL); toast(msg); return true; } catch(e){ return false; }
+}
+function shareNow(k){
+  if (k === 'copy'){ copyShare('結果をコピーしました。貼り付けてシェアできます').then(ok => { if (!ok) toast('コピーできませんでした'); }); return; }
+  const s = SNS.find(x => x[0] === k);
+  if (!s) return;
+  const url = s[3](encodeURIComponent(shareText()), encodeURIComponent(SHARE_URL));
+  if (k === 'discord') copyShare('文章をコピーしました。Discordに貼り付けてください');   // 開く前にコピー（押した直後でないとコピーできない）
+  const w = window.open(url, '_blank');
+  if (w) w.opener = null;
+  else toast('開けませんでした。「コピー」から貼り付けてください');
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-share]'); if (b){ sfx('ui'); shareNow(b.dataset.share); } });
 
 /* ---------- タイトルの説明（遊び方・札の説明） ---------- */
 const HOWTO = [
@@ -3097,20 +3170,61 @@ function showHowto(){
     items: HOWTO.map(([g, col, n, d]) => ({ html:`<div class="mini info" style="--k:${col}"><span class="mk">${g}</span></div><div><div class="nm">${n}</div><div class="ds">${d}</div></div>` })),
     btn:{ label:'もどる', on:enterTitle } });
 }
-function showCardGuide(){
+/* ---------- 図鑑（札・お守り・妖怪） ----------
+   札は全部、お守りは手に入れたもの、妖怪は出会ったものだけ中身が見える */
+const DEX_TABS = [['card', '札'], ['relic', 'お守り'], ['foe', '妖怪']];
+function dexCards(){
   const unlocked = new Set(['zan', 'mamo', ...POOL]);
   const keys = Object.keys(SK).filter(k => k !== 'noroi').sort((a, b) => SK[a].r - SK[b].r).concat('noroi');
-  chooser({ info:true, title:'札の説明', sub:'同じ札を2枚そろえると、その場で技が出る',
-    items: keys.map(k => {
-      const sk = SK[k];
-      const tag = k === 'noroi' ? '邪魔札' : RAR_NAME[sk.r];
-      const up = k === 'noroi' ? '' : `<br>強化すると：${upgradeDiff(k)}`;
-      const lock = unlocked.has(k) || k === 'noroi' ? '' : '<br><em>まだ出てこない（周回を重ねると解放）</em>';
-      return { html:`<div class="mini" style="--k:${sk.col}">${monSVG(k)}<span class="mk">${sk.n}</span></div>`
-        + `<div><div class="nm">${sk.n}　<small>${tag}</small></div><div class="ds">${sk.d(0)}${up}${lock}</div></div>` };
-    }),
-    btn:{ label:'もどる', on:enterTitle } });
+  return { note:'同じ札を2枚そろえると、その場で技が出る', items: keys.map(k => {
+    const sk = SK[k];
+    const tag = k === 'noroi' ? '邪魔札' : RAR_NAME[sk.r];
+    const up = k === 'noroi' ? '' : `<br>強化すると：${upgradeDiff(k)}`;
+    const lock = unlocked.has(k) || k === 'noroi' ? '' : '<br><em>まだ出てこない（周回を重ねると解放）</em>';
+    return { html:`<div class="mini" style="--k:${sk.col}">${monSVG(k)}<span class="mk">${sk.n}</span></div>`
+      + `<div><div class="nm">${sk.n}　<small>${tag}</small></div><div class="ds">${sk.d(0)}${up}${lock}</div></div>` };
+  }) };
 }
+function dexRelics(dx){
+  const got = dx.r || {};
+  const ids = Object.keys(RELICS).sort((a, b) => !!RELICS[a].boss - !!RELICS[b].boss);
+  const n = ids.filter(id => got[id]).length;
+  return { note:`集めたお守り ${n}/${ids.length}`, items: ids.map(id => {
+    const R = RELICS[id], c = got[id];
+    if (c) return { html: relicHTML(id).replace('</div><div class="ds">', `　<small>手に入れた ${c}回</small></div><div class="ds">`) };
+    const hint = LOCKED_RELICS.includes(id) ? 'まだ出てこない（周回を重ねると解放）' : R.boss ? '幕の主を祓うと選べるお守り' : 'まだ手に入れていない';
+    return { html:`<div class="mini relic dexq${R.boss ? ' boss' : ''}">？</div><div><div class="nm">？？？</div><div class="ds">${hint}</div></div>` };
+  }) };
+}
+function dexFoes(dx){
+  const met = dx.f || {};
+  const list = [];
+  ACTS.forEach((A, a) => {
+    [...new Set([...A.easy, ...A.normal])].forEach(id => list.push([id, a, '']));
+    A.elite.forEach(id => list.push([id, a, '強敵']));
+    list.push([A.boss, a, '幕の主']);
+  });
+  const n = list.filter(([id]) => met[id]).length;
+  return { note:`出会った妖怪 ${n}/${list.length}`, items: list.map(([id, a, kind]) => {
+    const f = FOES[id], v = met[id], where = `第${a + 1}幕${kind ? 'の' + kind : ''}`;
+    if (!v) return { html:`<div class="mini dexq">？</div><div><div class="nm">？？？　<small>${where}</small></div><div class="ds">まだ出会っていない</div></div>` };
+    const acts = f.it.map(intentDex).join(' → ');
+    const notes = [...new Set(f.it.map(([t]) => t))].filter(t => INTENT_NOTE[t] && t !== 'def').map(t => `${INTENT_DEX[t]}＝${INTENT_NOTE[t]}`);
+    return { html:`<div class="mini dexfoe">${PX[id] ? pxArt(id, mute(f.col)) : f.e}</div>`
+      + `<div><div class="nm">${f.n}　<small>${where}</small></div><div class="ds">HP ${f.hp}・約${f.iv}秒ごとに行動<br>行動：${acts}（くり返し）`
+      + `${notes.length ? '<br>' + notes.join('、') : ''}<br><em>出会った ${v[0]}回・祓った ${v[1]}回</em></div></div>` };
+  }) };
+}
+function showDex(tab){
+  ui.dexTab = tab = tab || ui.dexTab || 'card';
+  const dx = loadMeta().dex;
+  const { note, items } = tab === 'relic' ? dexRelics(dx) : tab === 'foe' ? dexFoes(dx) : dexCards();
+  ui.lastChooser = null;   // タブを変えたらいちばん上から
+  chooser({ info:true, title:'図鑑',
+    sub:`<div class="dextabs">${DEX_TABS.map(([k, l]) => `<button class="pausebtn${k === tab ? ' sel' : ''}" data-dex="${k}">${l}</button>`).join('')}</div><div class="dexnote">${note}</div>`,
+    items, btn:{ label:'もどる', on:enterTitle } });
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-dex]'); if (b){ sfx('ui'); showDex(b.dataset.dex); } });
 $('#btnHow').addEventListener('click', showHowto);
 $('#btnVol').addEventListener('click', () => { $('#inPanel').classList.remove('on'); $('#volPanel').classList.toggle('on'); });
 $('#btnInput').addEventListener('click', () => { $('#volPanel').classList.remove('on'); $('#inPanel').classList.toggle('on'); });
@@ -3127,7 +3241,7 @@ document.querySelectorAll('.volSe').forEach(x => {
   x.addEventListener('change', () => sfx('match', 3));   // 離したときに今の大きさで1回鳴らす
 });
 renderVol();
-$('#btnCards').addEventListener('click', showCardGuide);
+$('#btnCards').addEventListener('click', () => showDex());
 function renderAsc(){
   $('#ascNum').textContent = ui.asc ? `闇 ${ui.asc}` : '宵の口';
   $('#ascDesc').textContent = ui.asc ? ASC.slice(1, ui.asc + 1).join('／') : 'ふつうの難しさ（夜明けを迎えるたびに夜が深くなる）';
@@ -3135,11 +3249,34 @@ function renderAsc(){
 }
 $('#ascDn').addEventListener('click', () => { ui.asc = Math.max(0, ui.asc - 1); renderAsc(); });
 $('#ascUp').addEventListener('click', () => { ui.asc = Math.min(loadMeta().maxAsc, ui.asc + 1); renderAsc(); });
+// 図鑑ができる前から続いている周回は、今持っているお守りと戦っている妖怪を図鑑に入れておく
+(() => {
+  const d = loadSave(), r = d.run;
+  if (!r) return;
+  const meta = loadMeta(), dx = meta.dex;
+  dx.r = dx.r || {}; dx.f = dx.f || {};
+  let ch = false;
+  (r.relics || []).forEach(id => { if (RELICS[id] && !dx.r[id]){ dx.r[id] = 1; ch = true; } });
+  const fid = r.battle && r.battle.foeId;
+  if (FOES[fid] && !dx.f[fid]){ dx.f[fid] = [1, 0]; ch = true; }
+  if (ch){ d.meta = meta; writeSave(d); }
+})();
 // 最初から書いてある説明文にも目印を入れる
 document.querySelectorAll('.title-note, .logo-sub, .ovnote').forEach(wrapJP);
 enterTitle();
+// 拡大させない。iPhone（Safari も Chrome も中身は同じ）は user-scalable=no を無視するので、二本指の操作そのものを止める
 document.addEventListener('dblclick', e => e.preventDefault());
-document.addEventListener('gesturestart', e => e.preventDefault());
+['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive:false }));
+document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive:false });
+// それでも拡大されてしまったら（端末の設定などで）、viewport を入れ直して等倍に戻す
+if (window.visualViewport){
+  const vpm = document.querySelector('meta[name=viewport]'), vpc = vpm.content;
+  let vpT = 0;
+  visualViewport.addEventListener('resize', () => {
+    clearTimeout(vpT);
+    vpT = setTimeout(() => { if (visualViewport.scale > 1.01){ vpm.content = vpc.replace('initial-scale=1', 'initial-scale=1.0'); requestAnimationFrame(() => { vpm.content = vpc; }); } }, 300);
+  });
+}
 window.HYAKKI = { get run(){ return run; }, get B(){ return B; }, DEBUG }; // デバッグ用
 </script>
 </body>
