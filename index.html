@@ -94,6 +94,10 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .sharebtn{display:inline-flex;align-items:center;justify-content:center;gap:calc(var(--u)*1.6);min-width:calc(var(--u)*56);
   padding:calc(var(--u)*2.6) calc(var(--u)*5);font-size:calc(var(--u)*4.4)}
 .sharebtn svg{width:calc(var(--u)*5);height:calc(var(--u)*5);fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.sharebtn svg .fill{fill:currentColor;stroke:none}
+.sharecard{display:block;width:100%;margin:0 0 calc(var(--u)*2);border-radius:calc(var(--u)*1);border:1px solid var(--line);
+  user-select:auto;-webkit-user-select:auto;-webkit-touch-callout:default}
+.mini .xlogo{width:52%;height:52%;fill:#fff}
 .rec-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:calc(var(--u)*1.6);width:calc(var(--u)*88)}
 .rec-grid div{padding:calc(var(--u)*2) calc(var(--u)*2);border-radius:calc(var(--u)*1);background:var(--panel);border:1px solid var(--line);text-align:center}
 .rec-grid b{display:block;font-size:calc(var(--u)*5);color:var(--paper);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -775,7 +779,7 @@ const FEVER_MS = 4000;
 const REFILL_MS = 420;
 const PLAYER_HP = 60;
 // 版：公開するたびに変える（ホーム画面のアプリは開きっぱなしで古い版のまま動くことがあるので、新しい版があれば読み込み直す）
-const BUILD = '2026-10-11.7';
+const BUILD = '2026-10-11.9';
 const SAVE_KEY = 'hyakki-mekuri.v1';
 const OLD_SAVE_KEY = 'dopa-mekuri.v1'; // 旧名のころの保存（読み込みのみ）
 
@@ -3327,9 +3331,13 @@ $('#btnRec').addEventListener('click', showRecords);
 // 共有メニューに画像を渡せない端末（PCなど）では、画像を保存して文章をコピーする。
 // X・LINE の投稿画面をURLで開くやり方では画像を付けられないため、ボタンを分けずにこの1つにした
 const SHARE_URL = 'https://kome0824.github.io/hyakki-mekuri/';
+// PC（操作が PC）のときは「Xで共有」：画像を保存して、文章入りの X の投稿画面を開く
+const isPC = () => document.body.classList.contains('pc');
+const X_LOGO = '<path class="fill" d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>';   // Simple Icons（CC0）
 function shareRow(label){
+  const pc = isPC();
   return `<div class="share"><button class="btn sharebtn" data-share="1">`
-    + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>${label}</button></div>`;
+    + `<svg viewBox="0 0 24 24" aria-hidden="true">${pc ? X_LOGO : '<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/>'}</svg>${pc ? 'Xで共有' : label}</button></div>`;
 }
 const shareText = () => ui.share + '\n#百鬼めくり';
 // その場で（同期で）コピーする。すぐ別のアプリに切り替わっても、コピーは先に終わっている
@@ -3426,7 +3434,39 @@ function prepCard(c){
   const my = ui.card = c;
   drawCard(c).then(b => { if (b && ui.card === my) ui.cardFile = new File([b], 'hyakki-mekuri.png', { type:'image/png' }); }).catch(() => {});
 }
+function saveCard(f){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(f); a.download = f.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+// PC：結果の画像をその場で見せる画面。「画像をコピーしてXを開く」で、Xの投稿欄に貼り付けるだけで画像が付く
+const xUrl = () => `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText())}&url=${encodeURIComponent(SHARE_URL)}`;
+function openX(){ const w = window.open(xUrl(), '_blank'); if (w) w.opener = null; return !!w; }
+async function copyCard(f){
+  try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': f })]); return true; } catch(e){ return false; }
+}
+function shareX(){
+  const f = ui.cardFile;
+  if (!f) return toast('画像を用意しています。少し待ってもう一度押してください');
+  const back = ui.lastChooser, src = URL.createObjectURL(f);
+  const done = () => { URL.revokeObjectURL(src); chooser(back); };
+  chooser({ info:true, title:'Xで共有',
+    sub:`<img class="sharecard" src="${src}" alt="結果の画像">画像をコピーしてXを開いたら、投稿欄に貼り付け（Ctrl+V／⌘V）で画像が付きます。<br>画像は右クリックでコピーしたり、ドラッグしたりもできます。`,
+    items:[
+      { html:`<div class="mini info" style="--k:#111"><svg class="xlogo" viewBox="0 0 24 24" aria-hidden="true">${X_LOGO}</svg></div><div><div class="nm">画像をコピーしてXを開く</div><div class="ds">文章とURLが入った投稿画面が開く</div></div>`,
+        on: async () => {
+          const ok = await copyCard(f);
+          if (!openX()) return toast('Xを開けませんでした。もう一度押してください');
+          toast(ok ? '画像をコピーしました。Xの投稿欄に貼り付けてください' : '画像をコピーできませんでした。「画像を保存」から添付してください');
+        } },
+      { html:'<div class="mini info" style="--k:#2c4a6e"><span class="mk">保</span></div><div><div class="nm">画像を保存</div><div class="ds">ファイルにして、あとで添付する</div></div>',
+        on: () => { saveCard(f); toast('画像を保存しました'); } },
+    ],
+    btn:{ label:'もどる', on:done } });
+}
 function shareNow(){
+  if (isPC()) return shareX();
   const f = ui.cardFile;
   if (!f) return toast('画像を用意しています。少し待ってもう一度押してください');
   const text = shareText() + '\n' + SHARE_URL;
@@ -3436,10 +3476,7 @@ function shareNow(){
   }
   // 共有メニューに画像を渡せないときは、画像を保存して文章をコピー
   const copied = copyNow();
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(f); a.download = f.name;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  saveCard(f);
   toast(copied ? '画像を保存して、文章をコピーしました。投稿に貼り付けて画像を添付してください' : '画像を保存しました。投稿に添付してください');
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-share]')){ sfx('ui'); shareNow(); } });
