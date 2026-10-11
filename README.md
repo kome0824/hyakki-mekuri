@@ -36,4 +36,4 @@
 
 ## PV
 
-`pv/hyakki_pv.mp4`（15秒）
+`pv/hyakki_pv.mp4`（15秒・縦長）、`pv/hyakki_pv_wide.mp4`（15秒・横長）
