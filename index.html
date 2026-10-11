@@ -2804,6 +2804,7 @@ function endRun(win){
   const meta = loadMeta();
   const before = unlockedCount(meta);
   meta.runs++;
+  const prevMaxAsc = meta.maxAsc;
   if (win){ meta.wins++; meta.maxAsc = Math.max(meta.maxAsc, Math.min(ASC.length - 1, r.asc + 1)); }
   const prevBest = meta.best;
   meta.best = Math.max(meta.best, score);
@@ -2843,7 +2844,7 @@ function endRun(win){
         ${cell(score, '得点', score > prevBest ? 'best' : '')}${cell(meta.best, '最高得点')}${cell(S.matches, 'そろえた回数')}
         ${cell(S.maxCombo, '最大連続')}${cell(S.fevers, '百鬼夜行')}${cell(`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`, '戦闘時間')}
       </div>
-      ${win && meta.maxAsc > r.asc ? `<div class="res-note">闇${r.asc + 1} に挑めるようになった</div>` : ''}
+      ${meta.maxAsc > prevMaxAsc ? `<div class="res-note">闇${meta.maxAsc} に挑めるようになった</div>` : ''}
       ${r.endless && meta.endBest && meta.endBest.floor === r.floor && (!prevEnd || prevEnd.floor < r.floor) ? `<div class="res-note">果てなき夜の新記録</div>` : ''}
       <button class="btn sub sharebtn" data-share="1">結果をシェア</button>
       <div class="res-sec">${items.length ? '新しく解放' : (after < UNLOCKS.length ? `次の解放まで あと${UNLOCK_STEP - meta.pts % UNLOCK_STEP}` : 'すべて解放済み')}</div>
