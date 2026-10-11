@@ -195,6 +195,14 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .board{position:relative;display:grid;grid-template-columns:repeat(4,calc(var(--u)*22));grid-template-rows:repeat(4,calc(var(--u)*22));
   gap:calc(var(--u)*1.6);justify-content:center;margin-top:calc(var(--u)*.8);perspective:calc(var(--u)*200)}
 .slot{position:relative;touch-action:manipulation}
+/* キーボード操作（PC）：札の左下にキーの印、選んでいるボタンに金の枠 */
+.kh{position:absolute;left:calc(var(--u)*1);bottom:calc(var(--u)*.6);z-index:2;display:none;font-size:calc(var(--u)*2.8);font-weight:900;
+  color:rgba(236,227,207,.55);pointer-events:none;font-family:var(--font)}
+body.pc .kh{display:block}
+.slot.empty .kh{display:none}
+.kbdnote{display:none;color:var(--sub);font-size:calc(var(--u)*3);text-align:center}
+body.pc .kbdnote{display:block}
+body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(var(--u)*.4)}
 .card{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .13s ease-out}
 .slot.open .card{transform:rotateY(180deg) scale(1.05)}
 .slot.peek .card{transform:rotateY(180deg) scale(.92)}
@@ -419,7 +427,7 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
   <div class="hurtfx" id="hurtfx"></div>
 
   <section id="title" class="screen on">
-    <div class="sndbar"><button class="pausebtn mutebtn" id="btnMute">音 オフ</button><button class="pausebtn" id="btnVol">音量</button></div>
+    <div class="sndbar"><button class="pausebtn" id="btnInput">操作 自動</button><button class="pausebtn mutebtn" id="btnMute">音 オフ</button><button class="pausebtn" id="btnVol">音量</button></div>
     <div class="volpanel" id="volPanel"><div class="vol"><label><span>BGM</span><input type="range" min="0" max="100" step="5" class="volBgm"><b class="volBgmN"></b></label><label><span>効果音</span><input type="range" min="0" max="100" step="5" class="volSe"><b class="volSeN"></b></label></div></div>
     <div class="logo">百鬼めくり</div>
     <div class="logo-sub">めくって、そろえて、百鬼を祓え。</div>
@@ -431,6 +439,7 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
       <div class="ascdesc" id="ascDesc"></div>
     </div>
     <div class="title-meta" id="titleMeta"></div>
+    <div class="kbdnote">キーボード：↑↓で選ぶ　Enterで決定　Escでもどる</div>
     <div class="title-note">札をどんどんめくれ<br>同じ絵柄が2枚開いたら即発動<br>妖怪は待ってくれない</div>
     <!-- 説明は画面の下段に（「はじめる」「つづきから」の近くに置かない） -->
     <div class="title-links"><button class="btn sub" id="btnHow">遊び方</button><button class="btn sub" id="btnCards">札の説明</button><button class="btn sub" id="btnRec">記録</button></div>
@@ -472,6 +481,7 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
       <button class="btn sub" id="btnQuitBattle">タイトルへ</button>
       <button class="pausebtn mutebtn" id="btnMutePause">音 オフ</button>
       <div class="vol"><label><span>BGM</span><input type="range" min="0" max="100" step="5" class="volBgm"><b class="volBgmN"></b></label><label><span>効果音</span><input type="range" min="0" max="100" step="5" class="volSe"><b class="volSeN"></b></label></div>
+      <div class="ovnote kbdnote">札：1〜4・Q〜R・A〜F・Z〜V<br>右手なら 7〜0・U〜P・J〜;・M〜/<br>Esc：一時停止／再開</div>
       <div class="ovnote">タイトルに戻っても、「つづきから」でこの戦闘の今の状態から再開できます</div>
       <div class="ovrel"><div class="ovrel-t">持っているお守り</div><div class="ovrel-list" id="ovRelics"></div></div>
     </div>
@@ -667,6 +677,8 @@ const show = id => {
   const bar = run && !ui.titleInfo && (id === 'map' || id === 'choose');
   $('#runbar').classList.toggle('on', !!bar);
   $('#choose').classList.toggle('norun', id === 'choose' && (!run || ui.titleInfo));
+  // キーボードで遊んでいるときは、次の画面でいちばん押しそうなものを先に選んでおく
+  if (document.body.classList.contains('kbd')) setTimeout(() => { const l = navItems(); kfocus(l.length ? kdefault(l) : null); }, 0);
   bgmMode(id === 'battle' ? (run && run.pending && run.pending.kind === 'boss' ? 'boss' : 'battle') : 'night');
   if (bar){
     renderMapHead();
@@ -809,7 +821,7 @@ function buildBoard(){
   for (let i = 0; i < SLOTS; i++){
     const el = document.createElement('div');
     el.className = 'slot';
-    el.innerHTML = '<div class="card"><div class="face back">百</div><div class="face front"></div></div>';
+    el.innerHTML = `<div class="card"><div class="face back">百</div><div class="face front"></div></div><span class="kh">${KEY_LABEL[i]}</span>`;
     el.addEventListener('pointerdown', e => { e.preventDefault(); tap(i); });
     bd.appendChild(el);
   }
@@ -1329,6 +1341,101 @@ function renderVol(){
   document.querySelectorAll('.mutebtn').forEach(x => { x.textContent = MUTED ? '音 オフ' : '音 オン'; x.classList.toggle('on', !MUTED); });
 }
 applyVol();
+
+/* ---------- キーボード操作 ----------
+   操作の種類：自動（マウス主体の端末ならPC）／スマホ／PC。PCでは札にキーの印を出す。
+   盤面：4×4と同じ形のキー（左手 1〜4・Q〜R・A〜F・Z〜V、右手 7〜0・U〜P・J〜;・M〜/）。Esc で一時停止。
+   ほかの画面：↑↓←→ で選ぶ、Enter・Space で決定、Esc・Backspace で「もどる」、1〜9 で選択肢をそのまま選ぶ */
+const KEY_CODES = [
+  ['Digit1','Digit2','Digit3','Digit4','KeyQ','KeyW','KeyE','KeyR','KeyA','KeyS','KeyD','KeyF','KeyZ','KeyX','KeyC','KeyV'],
+  ['Digit7','Digit8','Digit9','Digit0','KeyU','KeyI','KeyO','KeyP','KeyJ','KeyK','KeyL','Semicolon','KeyM','Comma','Period','Slash'],
+];
+const KEY_LABEL = ['1','2','3','4','Q','W','E','R','A','S','D','F','Z','X','C','V'];
+const INPUT_KEY = 'hyakki-mekuri.input';
+let INPUT = 'auto';
+try { INPUT = localStorage.getItem(INPUT_KEY) || 'auto'; } catch(e){}
+const autoPC = () => matchMedia('(hover: hover) and (pointer: fine)').matches;
+function applyInput(){
+  const pc = INPUT === 'pc' || (INPUT === 'auto' && autoPC());
+  document.body.classList.toggle('pc', pc);
+  const el = $('#btnInput');
+  if (el) el.textContent = '操作 ' + (INPUT === 'auto' ? `自動(${pc ? 'PC' : 'スマホ'})` : INPUT === 'pc' ? 'PC' : 'スマホ');
+}
+function cycleInput(){
+  INPUT = { auto:'pc', pc:'touch', touch:'auto' }[INPUT];
+  try { localStorage.setItem(INPUT_KEY, INPUT); } catch(e){}
+  applyInput();
+}
+// 今の画面で選べるもの（表示されていて押せるボタン）。マップは行ける所を先に
+function navItems(){
+  if ($('#battle').classList.contains('on')) return B && B.paused ? [...$('#pauseOv').querySelectorAll('button')].filter(vis) : [];
+  const scr = $('.screen.on');
+  if (!scr) return [];
+  let list = [...scr.querySelectorAll('button')].filter(b => vis(b) && !b.disabled && !b.classList.contains('static'));
+  if (scr.id === 'map') list = [...list.filter(b => b.classList.contains('can')), ...list.filter(b => !b.classList.contains('node'))];
+  if ($('#runbar').classList.contains('on')) list = list.concat([...$('#runbar').querySelectorAll('button')].filter(vis));
+  if ($('#volPanel').classList.contains('on')) list = list.filter(b => b.closest('.sndbar'));
+  return list;
+}
+const vis = el => !!(el.offsetParent || el.getClientRects().length) && getComputedStyle(el).visibility !== 'hidden';
+const KF = { el:null };
+function kfocus(el){
+  if (KF.el) KF.el.classList.remove('kfocus');
+  KF.el = el;
+  if (el){ el.classList.add('kfocus'); el.scrollIntoView({ block:'nearest' }); }
+}
+// まだ何も選んでいないときは、いちばん押しそうなもの（はじめる・行ける所・最初の選択肢・つづける）から
+function kdefault(list){ return list.find(b => b.matches('#btnNew, #btnCont, .node.can, .pick:not(.static), #btnResume, #cBtn')) || list[0]; }
+const guarded = () => { const s = $('.screen.on'); return !!(s && s.classList.contains('guard')); };
+function kmove(d){
+  const list = navItems();
+  if (!list.length) return;
+  let i = list.indexOf(KF.el);
+  i = i < 0 ? list.indexOf(kdefault(list)) : (i + d + list.length) % list.length;
+  kfocus(list[i]);
+  sfx('ui');
+}
+function kback(){
+  if ($('#battle').classList.contains('on')){ if (B && !B.over) setPause(!B.paused); return; }
+  if ($('#volPanel').classList.contains('on')) return $('#volPanel').classList.remove('on');
+  const b = $('#cBtn');
+  if ($('#choose').classList.contains('on') && vis(b) && /もどる|店を出る/.test(b.textContent)) b.click();
+}
+document.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input')) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  sfxInit();
+  document.body.classList.add('kbd');
+  const c = e.code;
+  // 盤面
+  if ($('#battle').classList.contains('on') && B && !B.over && !B.paused){
+    const i = KEY_CODES[0].indexOf(c) >= 0 ? KEY_CODES[0].indexOf(c) : KEY_CODES[1].indexOf(c);
+    if (i >= 0){ e.preventDefault(); if (!e.repeat) tap(i); return; }
+  }
+  if (c === 'Escape' || c === 'Backspace'){ e.preventDefault(); kback(); return; }
+  if (e.repeat && (c === 'Enter' || c === 'Space')) return;
+  if (['ArrowDown', 'ArrowRight', 'Tab'].includes(c) && !(c === 'Tab' && e.shiftKey)){ e.preventDefault(); kmove(1); return; }
+  if (['ArrowUp', 'ArrowLeft'].includes(c) || (c === 'Tab' && e.shiftKey)){ e.preventDefault(); kmove(-1); return; }
+  if (c === 'Enter' || c === 'Space' || c === 'NumpadEnter'){
+    const list = navItems();
+    if (!list.length) return;
+    e.preventDefault();
+    if (!list.includes(KF.el)){ kfocus(kdefault(list)); sfx('ui'); return; }   // まだ何も選んでいなければ、まず選ぶ
+    if (guarded()) return;   // 戦闘直後の誤操作防止はキーにも
+    sfx('ui');
+    KF.el.click();
+    return;
+  }
+  // 選択の画面：1〜9 でそのまま選ぶ
+  const m = c.match(/^(?:Digit|Numpad)([1-9])$/);
+  if (m && $('#choose').classList.contains('on') && !guarded()){
+    const picks = [...$('#cItems').querySelectorAll('.pick')].filter(b => !b.disabled && !b.classList.contains('static'));
+    const b = picks[+m[1] - 1];
+    if (b){ e.preventDefault(); sfx('ui'); b.click(); }
+  }
+});
+// 触ったりクリックしたりしたら、選択の枠は消す
+document.addEventListener('pointerdown', () => document.body.classList.remove('kbd'), true);
 
 /* ---------- 演出 ---------- */
 function pulse(el, cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
@@ -2944,6 +3051,8 @@ function showCardGuide(){
 }
 $('#btnHow').addEventListener('click', showHowto);
 $('#btnVol').addEventListener('click', () => $('#volPanel').classList.toggle('on'));
+$('#btnInput').addEventListener('click', cycleInput);
+applyInput();
 document.querySelectorAll('.mutebtn').forEach(x => x.addEventListener('click', () => { setMute(!MUTED); if (!MUTED) sfx('ui'); }));
 document.addEventListener('pointerdown', e => { if (!e.target.closest('#volPanel, #btnVol')) $('#volPanel').classList.remove('on'); });
 document.querySelectorAll('.volBgm').forEach(x => x.addEventListener('input', () => setVol('bgm', +x.value)));
