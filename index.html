@@ -264,7 +264,6 @@ body.pc .slot:is(.open,.peek,.closing) .kh{display:block}
 .ovkb{width:calc(var(--u)*84)}
 .kbdnote{display:none;color:var(--sub);font-size:calc(var(--u)*3);text-align:center}
 body.pc .kbdnote{display:block}
-body.pc #title .title-note{display:none}   /* PCではタイトルの説明文の代わりにキーの説明（タイトルの高さを変えない） */
 body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(var(--u)*.4)}
 .card{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .13s ease-out}
 .slot.open .card{transform:rotateY(180deg) scale(1.05)}
@@ -540,7 +539,7 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
       <div class="ascdesc" id="ascDesc"></div>
     </div>
     <div class="kbdnote">キーボード：↑↓で選ぶ　Enterで決定　Escでもどる</div>
-    <div class="title-note">札をどんどんめくれ<br>同じ絵柄が2枚開いたら即発動<br>物の怪は待ってくれない</div>
+    <div class="title-note">札を押してめくり、同じ札を2枚そろえると技が出る<br>輪が一周すると敵が攻撃。直前に「守」をそろえて防ぐ</div>
     <!-- 説明は画面の下段に（「はじめる」「つづきから」の近くに置かない） -->
     <div class="tsp"></div>
     <div class="title-links"><button class="btn sub" id="btnHow">遊び方</button><button class="btn sub" id="btnCards">図鑑</button><button class="btn sub" id="btnRec">記録</button></div>
@@ -776,7 +775,7 @@ const FEVER_MS = 4000;
 const REFILL_MS = 420;
 const PLAYER_HP = 60;
 // 版：公開するたびに変える（ホーム画面のアプリは開きっぱなしで古い版のまま動くことがあるので、新しい版があれば読み込み直す）
-const BUILD = '2026-10-11.4';
+const BUILD = '2026-10-11.5';
 const SAVE_KEY = 'hyakki-mekuri.v1';
 const OLD_SAVE_KEY = 'dopa-mekuri.v1'; // 旧名のころの保存（読み込みのみ）
 
