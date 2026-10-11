@@ -685,7 +685,7 @@ function save(){ const d = loadSave(); d.run = run; writeSave(d); }
 function startBattle(foeId){
   const f = FOES[foeId];
   const kind = run.pending ? run.pending.kind : 'fight';
-  let hpMul = 1, atkMul = 1, ivMul = hasR('hakuhyo') ? 1.1 : 1;
+  let hpMul = 1, atkMul = 1, ivMul = (hasR('hakuhyo') ? 1.1 : 1) * (hasR('uchiwa') ? 1.2 : 1) * (hasR('senri') ? 0.9 : 1);
   if (kind === 'elite' && asc(1)) hpMul *= 1.2;
   if (kind === 'fight' && asc(2)) hpMul *= 1.15;
   if (kind === 'boss' && asc(3)) hpMul *= 1.15;
@@ -702,9 +702,9 @@ function startBattle(foeId){
     foeId, f, rng, uid,
     pile: cards, disc: [], slots: new Array(SLOTS).fill(null),
     t: 0, last: 0, paused:false, over:false,
-    e: { hp:maxHp, max:maxHp, blk:0, str:0, burn:hasR('hidane') ? 6 : 0, weak:0, step:0, timer:0, iv:f.iv * 1000 * ivMul, atkMul },
+    e: { hp:maxHp, max:maxHp, blk:0, str:0, burn:(hasR('hidane') ? 6 : 0) + (hasR('gouka') ? 8 : 0), weak:0, step:0, timer:0, iv:f.iv * 1000 * ivMul, atkMul },
     fuku: hasR('fukutsu'), nMatch:0,
-    p: { blk:0, str:0 },
+    p: { blk:hasR('shugo') ? 15 : 0, str:hasR('odaiko') ? 2 : 0 },
     combo:0, lastMatch:-1e9, fever:false, feverEnd:0, burnAcc:0,
     stats:{ taps:0, matches:0, misses:0, maxCombo:0, fevers:0 },
     queue:[],
@@ -908,7 +908,8 @@ function mult(){ return (1 + Math.min(B.combo - 1, 12) * 0.1 * (hasR('kyoran') ?
 
 function startFever(){
   B.fever = true;
-  B.feverEnd = B.t + FEVER_MS + (hasR('yonetsu') ? 2000 : 0);
+  B.feverEnd = B.t + feverMs();
+  if (hasR('gouka')) B.e.burn += 8;
   B.stats.fevers++;
   log('百鬼夜行！ 札が全部見える！');
   $('#battle').classList.add('fever');
@@ -996,12 +997,28 @@ const SND = {
   // 敵の攻撃以外の行動
   foe(c, o, t){ tone(c, o, t, { f:220, f2:160, type:'square', d:.14, v:.05, lp:1200 }); },
   // 百鬼夜行：太鼓の連打から大きく一打、鈴が鳴る
+  // 百鬼夜行：スネアの連打から一撃と明るい和音
   fever(c, o, t){
-    for (let i = 0; i < 6; i++) tone(c, o, t + i * .07, { f:160, f2:70, d:.12, v:.2 + i * .06 });
-    tone(c, o, t + .45, { f:120, f2:40, d:.7, v:.8 });
-    hiss(c, o, t + .45, { f:400, type:'lowpass', d:.1, v:.4 });
-    [1175, 1568, 2349].forEach((f, i) => tone(c, o, t + .45 + i * .05, { f, d:.9, v:.05 }));
+    for (let i = 0; i < 6; i++) hiss(c, o, t + i * .05, { f:1800, q:.8, d:.06, v:.12 + i * .05 });
+    tone(c, o, t + .3, { f:110, f2:40, d:.6, v:.8 });
+    hiss(c, o, t + .3, { f:500, type:'lowpass', d:.1, v:.4 });
+    [62, 66, 69, 74].forEach(m => tone(c, o, t + .3, { f:mtof(m), type:'sawtooth', d:.7, v:.05, lp:2400 }));
   },
+  // 百鬼夜行中の札：めくると小さく「ピッ」
+  flipF(c, o, t){ SND.flip(c, o, t); tone(c, o, t, { f:988, type:'triangle', d:.05, v:.07 }); },
+  // 百鬼夜行中にそろった：明るい長調で駆け上がる3音＋きらめき。そろうたびに少しずつ上がる
+  matchF(c, o, t, combo = 1){
+    const sc = [0, 2, 4, 7, 9], i = Math.max(0, combo - 1) % 10;
+    const base = 74 + Math.floor(i / 5) * 12 + sc[i % 5];
+    [0, 4, 7].forEach((d, k) => {
+      tone(c, o, t + k * .035, { f:mtof(base - 12 + d), type:'square', d:.12, v:.045, lp:3000 });
+      tone(c, o, t + k * .035, { f:mtof(base - 12 + d), type:'triangle', d:.18, v:.09 });
+    });
+    hiss(c, o, t + .08, { f:5000, type:'highpass', d:.12, v:.08 });
+    tone(c, o, t, { f:90, f2:50, d:.12, v:.25 });   // 足元のドン
+  },
+  // 百鬼夜行中に当たった：太く低く
+  hitF(c, o, t, dmg = 6){ SND.hit(c, o, t, dmg + 20); hiss(c, o, t, { f:1200, f2:300, q:1, d:.15, v:.25 }); },
   // 退散：大太鼓と拍子木ふたつ
   win(c, o, t){
     tone(c, o, t, { f:120, f2:40, d:.8, v:.8 });
@@ -1021,7 +1038,7 @@ function sfxInit(){
     // 効果音は控えめの音量でまとめ、BGMと一緒にコンプレッサーを通す
     const comp = SFX.ctx.createDynamicsCompressor(), g = SFX.ctx.createGain(), se = SFX.ctx.createGain();
     comp.threshold.value = -14; comp.ratio.value = 4;
-    g.gain.value = .78; se.gain.value = seLevel();
+    g.gain.value = .74; se.gain.value = seLevel();
     se.connect(comp); comp.connect(g); g.connect(SFX.ctx.destination);
     SFX.out = se; SFX.master = comp;
   } catch(e){ SFX.ctx = null; }
@@ -1029,7 +1046,8 @@ function sfxInit(){
 function sfx(name, arg){
   if (SFX.rec) SFX.rec.push([performance.now(), name, arg]);   // PV用の記録
   if (!SFX.on || !SFX.ctx) return;
-  try { SND[name](SFX.ctx, SFX.out, SFX.ctx.currentTime + .005, arg); } catch(e){}
+  const f = B && B.fever && !B.over && SND[name + 'F'] ? name + 'F' : name;   // 百鬼夜行中は別の音
+  try { SND[f](SFX.ctx, SFX.out, SFX.ctx.currentTime + .005, arg); } catch(e){}
 }
 // 最初に画面に触れたときに音を使えるようにする（ブラウザの決まり）
 document.addEventListener('pointerdown', sfxInit, true);
@@ -1128,27 +1146,55 @@ const SONGS = {
 function bgmStep(c, o, t, i, s16, song, fever){
   const bars = song.prog.length, bar = Math.floor(i / 16) % bars, p = i % 16, last = bar === bars - 1;
   const [root, tri] = CH[song.prog[bar]];
+  const ev = song.mel[i % (bars * 16)];
+  if (fever) return bgmFever(c, o, t, p, bar, last, root, tri, ev, s16, song);
   // ドラム
   if (p === 0 && bar % 8 === 0) bCrash(c, o, t);
-  if (song.kick.includes(p) || (fever && p % 4 === 2 && song !== SONGS.night)) bKick(c, o, t, .75);
+  if (song.kick.includes(p)) bKick(c, o, t, .75);
   if (last && p >= 8) bSnare(c, o, t, .15 + (p - 8) * .03);   // 一周の終わりはスネアの連打
   else if (song.snare.includes(p)) bSnare(c, o, t, .32);
   if (song.hat.includes(p)) bHat(c, o, t, song.hatV * 1.4, true);
-  else if (p % 2 === 0 || fever) bHat(c, o, t, song.hatV * .7);
+  else if (p % 2 === 0) bHat(c, o, t, song.hatV * .7);
   // ベース：8分で根音とオクターブを刻む
   if (p % 2 === 0) bBass(c, o, t, root + ([0, 0, 12, 0, 0, 12, 0, 12][p >> 1]), s16 * 1.7);
   // 伴奏の和音（小節の頭）
   if (p === 0) bPad(c, o, t, tri, s16 * 16);
-  // アルペジオ：夜道は8分、戦闘は16分。百鬼夜行中は1オクターブ上
+  // アルペジオ：夜道は8分、戦闘は16分
   if (song.arp === 16 || p % 2 === 0){
     const k = song.arp === 16 ? p % 4 : (p >> 1) % 4;
-    const m = [tri[0], tri[1], tri[2], tri[1]][k];
-    bArp(c, o, t, m, fever ? .06 : .05);
+    bArp(c, o, t, [tri[0], tri[1], tri[2], tri[1]][k], .05);
   }
   // リード
-  const ev = song.mel[i % (bars * 16)];
   if (ev) bLead(c, o, t, ev[0], ev[1] * s16, song.lead);
 }
+// 百鬼夜行の編成：同じ曲・同じメロディのまま、ダンス寄りに厚くする
+//   四つ打ち＋手拍子、裏拍のオープンハットと16分のハット、16分で転がるベース、裏拍で刻む和音、
+//   リードは1オクターブ下とずらした音を重ねて太く。4小節ごとにスネアで盛り上げる
+function bClap(c, o, t, v){ [0, .012, .024].forEach(d => hiss(c, o, t + d, { f:1500, q:1.2, d:.07, v })); }
+function bStab(c, o, t, ms, d){ ms.forEach(m => tone(c, o, t, { f:mtof(m + 12), type:'sawtooth', d, v:.026, lp:2600 })); }
+function bgmFever(c, o, t, p, bar, last, root, tri, ev, s16, song){
+  if (p === 0 && bar % 4 === 0) bCrash(c, o, t);
+  if (p % 4 === 0) bKick(c, o, t, .72);
+  if (p === 4 || p === 12) { bSnare(c, o, t, .3); bClap(c, o, t, .22); }
+  if (bar % 4 === 3 && p >= 12) bSnare(c, o, t, .2 + (p - 12) * .06);   // 4小節ごとの盛り上げ
+  if (p % 4 === 2) bHat(c, o, t, .2, true); else bHat(c, o, t, .09);
+  bBass(c, o, t, root + (p % 2 ? 12 : 0), s16 * .9);   // 16分で転がるベース
+  if (p % 4 === 2) bStab(c, o, t, tri, s16 * 1.2);    // 裏拍で刻む和音
+  if (song.arp === 16 || p % 2 === 0) bArp(c, o, t, [tri[0], tri[1], tri[2], tri[1] + 12][p % 4], .065);
+  if (ev){
+    const len = ev[1] * s16;
+    bLead(c, o, t, ev[0], len, song.lead);
+    bLead(c, o, t, ev[0] - 12, len, song.lead * .4);
+    bLead(c, o, t + .008, ev[0] + .12, len, song.lead * .25);   // 少しずらして厚みを出す
+  }
+}
+// 百鬼夜行に入る瞬間：下から上へ吹き上がる音と、ドンという一撃。終わるときは逆に下がる
+function bFeverIn(c, o, t){
+  hiss(c, o, t, { f:400, f2:7000, q:2, a:.01, d:.35, v:.3 });
+  bKick(c, o, t + .02, .85); tone(c, o, t + .02, { f:70, f2:35, d:.6, v:.45 });
+  bCrash(c, o, t + .02);
+}
+function bFeverOut(c, o, t){ hiss(c, o, t, { f:6000, f2:300, q:2, a:.01, d:.45, v:.22 }); }
 // 決着のジングル（勝ち＝短いファンファーレ、負け＝ゆっくり下がる2小節）。鳴り終わるまで次の曲は待たせる
 const JINGLES = {
   win:{ bpm:160, start:.2, len:16, mel:parseMel('A5:2 C#6:2 E6:2 F#6:10'),
@@ -1216,7 +1262,8 @@ function bgmTick(){
   const song = SONGS[BGM.mode], s16 = 60 / song.bpm / 4;
   if (BGM.next < c.currentTime) BGM.next = c.currentTime + .05;
   const fever = !!(B && B.fever && !B.over);
-  if (fever && !BGM.fever) bCrash(c, BGM.gain, BGM.next);   // 百鬼夜行の始まりにシンバル
+  if (fever && !BGM.fever) bFeverIn(c, BGM.gain, c.currentTime + .02);    // 百鬼夜行に入った瞬間
+  if (!fever && BGM.fever && BGM.mode) bFeverOut(c, BGM.gain, c.currentTime + .02);
   BGM.fever = fever;
   while (BGM.next < c.currentTime + .2){
     try { bgmStep(c, BGM.gain, BGM.next, BGM.step, s16, song, fever); } catch(e){}
@@ -1970,16 +2017,19 @@ function heal(v){
 }
 function applySkill(k, u, m){
   const sk = SK[k], v = sk.nv(u), str = B.p.str;
+  const hm = m;   // 回復・防御に使う倍率
+  if (hasR('youtou')) m *= 1.3;   // 妖刀：攻撃だけ強く
   switch (k){
     case 'zan':    hitFoe((v + str + (hasR('toishi') ? 3 : 0)) * m); break;
     case 'ren':    hitFoe((v + str) * m); break;
-    case 'mamo':   B.p.blk += Math.round(v * m); floatNum($('#pHpBar').parentNode, '守+' + Math.round(v * m), 'blk'); break;
-    case 'kusuri': heal(v * m); break;
-    case 'zeni':   run.gold += Math.round(v * m); break;
+    case 'mamo': { const b = Math.round(v * hm * (hasR('youtou') ? .5 : 1)); B.p.blk += b; floatNum($('#pHpBar').parentNode, '守+' + b, 'blk'); break; }
+    case 'kusuri': heal(v * hm * (hasR('shugo') ? .5 : 1)); break;
+    case 'zeni':   run.gold += Math.round(v * hm); break;
     case 'sukasu': peekRandom(v, 1200); break;
     case 'en':     B.e.burn += Math.round(v * m); break;
     case 'toki':   B.e.timer = Math.max(0, B.e.timer - v * 1000); break;
-    case 'kyu':    hitFoe((v + str) * m); heal((2 + u) * m); break;
+    case 'kyu':    hitFoe((v + str) * m); heal((2 + u) * hm * (hasR('shugo') ? .5 : 1)); break;
+    case 'noroi':  if (hasR('jusou')) hitFoe(15 * m); break;
     case 'fuu':    B.e.weak += v; break;
     case 'ka':     B.p.str += v; break;
     case 'rai':    hitFoe((v * Math.max(1, B.combo) + str) * m); break;
@@ -2064,6 +2114,8 @@ function update(dt){
   if (B.fever && B.t - (B.lastRun || 0) > 140){ B.lastRun = B.t; spawnRunner(); }
   // 百鬼夜行の終了
   if (B.fever && B.t > B.feverEnd){ B.fever = false; $('#battle').classList.remove('fever'); for (let i = 0; i < SLOTS; i++) if (B.slots[i]) renderSlot(i); }
+  // 千里眼：5秒ごとに伏せ札2枚を一瞬見せる
+  if (hasR('senri') && B.t - (B.seerAt || 0) >= 5000){ B.seerAt = B.t; peekRandom(2, 900); }
   // 透かし・凍結の終了
   B.slots.forEach((s, i) => {
     if (!s) return;
@@ -2295,16 +2347,28 @@ const RELICS = {
   onime:   { n:'鬼の目', e:'鬼', d:'同時に5枚まで開ける。ただし開いている時間 -0.3秒', boss:true },
   kyoran:  { n:'狂乱',   e:'狂', d:'連続の倍率が2倍。ただし札が外れて閉じるたび自分に1ダメージ', boss:true },
   ougon:   { n:'黄金札', e:'黄', d:'戦闘で得る銭が2倍。ただし最大HP -10', boss:true },
+  tomoshi: { n:'百鬼の灯', e:'灯', d:'百鬼夜行が5連で始まる。ただし百鬼夜行が1秒短い', boss:true },
+  odaiko:  { n:'大太鼓',   e:'太', d:'戦闘の始めから筋力 +2。ただし最大HP -8', boss:true },
+  youtou:  { n:'妖刀',     e:'妖', d:'敵へのダメージ +30%。ただし守の防御が半分', boss:true },
+  shugo:   { n:'守護霊',   e:'霊', d:'戦闘の始めに防御 15。ただし薬・吸の回復が半分', boss:true },
+  senri:   { n:'千里眼',   e:'千', d:'5秒ごとに伏せ札2枚を一瞬見せる。ただし敵の行動が1割速い', boss:true },
+  jusou:   { n:'呪詛返し', e:'呪', d:'呪の札をそろえると敵に15ダメージ。ただし山札に呪が1組入る', boss:true },
+  gouka:   { n:'業火',     e:'業', d:'戦闘の始めと百鬼夜行のたびに敵にやけど8。ただし最大HP -6', boss:true },
+  kozuchi: { n:'打ち出の小槌', e:'槌', d:'戦闘でもらえる札がいつも強化済み。ただし店の値段が3割高い', boss:true },
+  uchiwa:  { n:'天狗の団扇', e:'扇', d:'敵の行動が2割遅い。ただし百鬼夜行が2秒短い', boss:true },
 };
 const hasR = id => !!run && run.relics.includes(id);
 function maxOpen(){ return MAX_OPEN + (hasR('yotsume') ? 1 : 0) + (hasR('onime') ? 2 : 0); }
 function openMs(){ return OPEN_MS + (hasR('nagame') ? 400 : 0) - (hasR('onime') ? 300 : 0); }
-function feverAt(){ return hasR('nekkyo') ? 6 : FEVER_AT; }
+function feverAt(){ return hasR('tomoshi') ? 5 : hasR('nekkyo') ? 6 : FEVER_AT; }
+function feverMs(){ return Math.max(1500, FEVER_MS + (hasR('yonetsu') ? 2000 : 0) - (hasR('tomoshi') ? 1000 : 0) - (hasR('uchiwa') ? 2000 : 0)); }
 function goldMul(){ return (hasR('kinun') ? 1.5 : 1) * (hasR('ougon') ? 2 : 1); }
 function gainRelic(id){
   if (run.relics.includes(id)) return;
   run.relics.push(id);
-  if (id === 'ougon'){ run.maxHp -= 10; run.hp = Math.min(run.hp, run.maxHp); }
+  const loseMax = { ougon:10, odaiko:8, gouka:6 }[id];
+  if (loseMax){ run.maxHp -= loseMax; run.hp = Math.min(run.hp, run.maxHp); }
+  if (id === 'jusou') run.deck.push({ k:'noroi', u:0 });
 }
 function relicChoices(n, boss){
   const { r, done } = rrng();
@@ -2503,7 +2567,7 @@ function afterWin(){
   const then = kind === 'boss' ? bossRelicPick : enterMap;
   const picks = cardChoices(3, kind);
   chooser({ title: kind === 'boss' ? '幕の主の落とし物' : '落とし物', sub: lines.join('　') + '<br>札を1組えらぶ',
-    items: picks.map(k => ({ html:cardPickHTML(k, 0), cls:'rar' + SK[k].r, on:() => { run.deck.push({ k, u:0 }); then(); } })),
+    items: picks.map(k => { const u = hasR('kozuchi') ? 1 : 0; return { html:cardPickHTML(k, u), cls:'rar' + SK[k].r, on:() => { run.deck.push({ k, u }); then(); } }; }),
     btn:{ label:'いらない', on:then }, guard:true });
 }
 function bossRelicPick(){
@@ -2623,7 +2687,7 @@ function deckPicker(title, filter, onPick, onBack, upgrade){
 
 /* ---------- 店 ---------- */
 const PRICE = [48, 74, 120];
-function priceMul(){ return (hasR('maneki') ? 0.8 : 1) * (asc(9) ? 1.1 : 1); }
+function priceMul(){ return (hasR('maneki') ? 0.8 : 1) * (asc(9) ? 1.1 : 1) * (hasR('kozuchi') ? 1.3 : 1); }
 function openShop(){
   if (!run.shop || run.shop.at !== run.at){
     const { r, done } = rrng();
