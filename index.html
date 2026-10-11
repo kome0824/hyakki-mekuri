@@ -436,6 +436,10 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
 .pick[disabled]{opacity:.4}
 .pick.danger{border-color:#7a2c20}
 .pick.danger .nm{color:#e0705a}
+.resetbtn{width:100%;margin:calc(var(--u)*2) 0 calc(var(--u)*1.6);padding:calc(var(--u)*1.4) calc(var(--u)*2.4);gap:calc(var(--u)*2.4);text-align:left}
+.resetbtn .mini{width:calc(var(--u)*9);height:calc(var(--u)*9);font-size:calc(var(--u)*4.6)}
+.resetbtn .nm{font-size:calc(var(--u)*3.8)}
+.resetbtn .ds{margin-top:calc(var(--u)*.3);font-size:calc(var(--u)*2.9);line-height:1.35}
 .pick > div:last-of-type{flex:1;min-width:0}
 /* 札の見本（戦闘の札と同じ見た目） */
 .mini{flex:none;width:calc(var(--u)*13);height:calc(var(--u)*13);border-radius:calc(var(--u)*1.2);display:flex;align-items:center;justify-content:center;
@@ -3139,6 +3143,7 @@ function showRecords(){
       ${cell(eb ? `第${eb.act}幕 ${eb.floor}階` : '―', '果てなき夜の最高到達', 'wide')}
     </div>
     ${m.runs ? shareRow('記録を共有') : ''}
+    <button class="pick danger resetbtn" data-reset="1"><div class="mini info" style="--k:#3a2622"><span class="mk">消</span></div><div><div class="nm">データを全部消す</div><div class="ds">最初に遊んだときの状態に戻す<br>（確認があります）</div></div></button>
     <div class="res-sec">${m.hist.length ? '最近の記録' : 'まだ記録がありません'}</div>`;
   ui.share = `百鬼めくりの記録：夜明け${m.wins}回・最高得点${m.best}・最大${m.bestCombo}連${eb ? `・果てなき夜 第${eb.act}幕${eb.floor}階` : ''}`;
   prepCard({ head:'記録', reach: m.maxAsc ? `闇${m.maxAsc} に挑める` : '宵の口（ふつうの難しさ）', big:`${m.wins}`, unit:'回', bigLabel:'夜明け',
@@ -3148,8 +3153,7 @@ function showRecords(){
   chooser({ info:true, title:'記録', sub,
     items: m.hist.map(h => ({ html:`<div class="mini info" style="--k:${h.win ? '#c9a14a' : h.e ? '#6a5aa8' : '#4a4658'}"><span class="mk">${h.win ? '明' : h.e ? '果' : '倒'}</span></div>`
       + `<div><div class="nm">${h.win ? '夜明け' : `${h.e ? '果てなき夜 ' : ''}第${h.act}幕 ${h.floor}階`}${h.asc ? `　<small>闇${h.asc}</small>` : ''}</div>`
-      + `<div class="ds">${fmtDate(h.d)}　得点${h.score}・最大${h.combo}連・${h.deg}℃</div></div>` }))
-      .concat([{ cls:'danger', html:'<div class="mini info" style="--k:#3a2622"><span class="mk">消</span></div><div><div class="nm">データを全部消す</div><div class="ds">最初に遊んだときの状態に戻す（確認があります）</div></div>', on:confirmReset }]),
+      + `<div class="ds">${fmtDate(h.d)}　得点${h.score}・最大${h.combo}連・${h.deg}℃</div></div>` })),
     btn:{ label:'もどる', on:enterTitle } });
 }
 /* ---------- 完全リセット ----------
@@ -3160,6 +3164,7 @@ function confirmReset(){
     items:[{ cls:'danger', html:'<div class="mini info" style="--k:#a8321f"><span class="mk">消</span></div><div><div class="nm">全部消す</div><div class="ds">押すとすぐ消えます</div></div>', on:doReset }],
     btn:{ label:'もどる', on:showRecords }, guard:true });   // 開いてすぐは押せない（勢いで消さないように）
 }
+document.addEventListener('click', e => { if (e.target.closest('[data-reset]')){ sfx('ui'); confirmReset(); } });
 function doReset(){
   try {
     Object.keys(localStorage).filter(k => k.startsWith('hyakki-mekuri.')).forEach(k => localStorage.removeItem(k));
