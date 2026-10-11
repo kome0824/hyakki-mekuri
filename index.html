@@ -52,15 +52,16 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .logo-sub{font-family:var(--mincho);color:var(--kin);font-size:calc(var(--u)*3.8);letter-spacing:.12em}
 .title-note{color:var(--sub);font-size:calc(var(--u)*3.4);text-align:center;line-height:1.7;font-weight:500}
 
-#btnVol{position:absolute;right:calc(var(--u)*3);top:calc(var(--u)*3);z-index:3}
+.sndbar{position:absolute;right:calc(var(--u)*3);top:calc(var(--u)*3);z-index:3;display:flex;gap:calc(var(--u)*1.6)}
+.mutebtn.on{color:var(--kin);border-color:var(--kin)}
 .volpanel{position:absolute;right:calc(var(--u)*3);top:calc(var(--u)*11);z-index:3;display:none;padding:calc(var(--u)*3) calc(var(--u)*4);
   border-radius:calc(var(--u)*1.2);background:var(--panel);border:1px solid var(--line)}
 .volpanel.on{display:block}
 .vol{display:flex;flex-direction:column;gap:calc(var(--u)*2.4)}
 .vol label{display:flex;align-items:center;gap:calc(var(--u)*2.4);font-size:calc(var(--u)*3.6)}
-.vol label span{width:calc(var(--u)*11)}
-.vol input{width:calc(var(--u)*40);accent-color:var(--kin)}
-.vol b{width:calc(var(--u)*7);text-align:right;font-variant-numeric:tabular-nums;color:var(--sub)}
+.vol label span{flex:none;width:calc(var(--u)*11);white-space:nowrap}
+.vol input{flex:none;width:calc(var(--u)*38);accent-color:var(--kin)}
+.vol b{flex:none;width:calc(var(--u)*9);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--sub)}
 .title-links{position:absolute;left:0;right:0;bottom:calc(var(--u)*7);display:flex;justify-content:center;gap:calc(var(--u)*3)}
 .title-links .btn{min-width:calc(var(--u)*26.5);padding:calc(var(--u)*2.2) calc(var(--u)*3);font-size:calc(var(--u)*3.8)}
 .mini.info{font-family:var(--mincho)}
@@ -410,7 +411,7 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
   <div class="hurtfx" id="hurtfx"></div>
 
   <section id="title" class="screen on">
-    <button class="pausebtn" id="btnVol">音量</button>
+    <div class="sndbar"><button class="pausebtn mutebtn" id="btnMute">音 オフ</button><button class="pausebtn" id="btnVol">音量</button></div>
     <div class="volpanel" id="volPanel"><div class="vol"><label><span>BGM</span><input type="range" min="0" max="100" step="5" class="volBgm"><b class="volBgmN"></b></label><label><span>効果音</span><input type="range" min="0" max="100" step="5" class="volSe"><b class="volSeN"></b></label></div></div>
     <div class="logo">百鬼めくり</div>
     <div class="logo-sub">めくって、そろえて、百鬼を祓え。</div>
@@ -460,6 +461,7 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
       <h2>一時停止</h2>
       <button class="btn" id="btnResume">つづける</button>
       <button class="btn sub" id="btnQuitBattle">タイトルへ</button>
+      <button class="pausebtn mutebtn" id="btnMutePause">音 オフ</button>
       <div class="vol"><label><span>BGM</span><input type="range" min="0" max="100" step="5" class="volBgm"><b class="volBgmN"></b></label><label><span>効果音</span><input type="range" min="0" max="100" step="5" class="volSe"><b class="volSeN"></b></label></div>
       <div class="ovnote">タイトルに戻っても、「つづきから」でこの戦闘の今の状態から再開できます</div>
       <div class="ovrel"><div class="ovrel-t">持っているお守り</div><div class="ovrel-list" id="ovRelics"></div></div>
@@ -1233,10 +1235,20 @@ try {
   if (v) Object.assign(VOL, v);
   else { if (localStorage.getItem(SND_KEY) === 'off') VOL.se = 0; if (localStorage.getItem(BGM_KEY) === 'off') VOL.bgm = 0; }
 } catch(e){}
-function seLevel(){ return .75 * VOL.se / 80; }
-function bgmLevel(){ return Math.max(.0001, BGM_VOL * VOL.bgm / 80); }
+// 音のオン・オフ（調整バーとは別）。最初はオフで、ボタンを押すとオン
+const MUTE_KEY = 'hyakki-mekuri.mute';
+let MUTED = true;
+try { MUTED = localStorage.getItem(MUTE_KEY) !== 'off'; } catch(e){}
+function seLevel(){ return MUTED ? .0001 : Math.max(.0001, .75 * VOL.se / 80); }
+function bgmLevel(){ return MUTED ? .0001 : Math.max(.0001, BGM_VOL * VOL.bgm / 80); }
+function setMute(m){
+  MUTED = m;
+  try { localStorage.setItem(MUTE_KEY, m ? 'on' : 'off'); } catch(e){}
+  applyVol();
+  renderVol();
+}
 function applyVol(){
-  SFX.on = VOL.se > 0; BGM.on = VOL.bgm > 0;
+  SFX.on = !MUTED && VOL.se > 0; BGM.on = !MUTED && VOL.bgm > 0;
   const c = SFX.ctx;
   if (!c) return;
   if (SFX.out){ SFX.out.gain.cancelScheduledValues(c.currentTime); SFX.out.gain.setTargetAtTime(seLevel(), c.currentTime, .03); }
@@ -1253,6 +1265,7 @@ function renderVol(){
   document.querySelectorAll('.volSe').forEach(x => x.value = VOL.se);
   document.querySelectorAll('.volBgmN').forEach(x => x.textContent = VOL.bgm);
   document.querySelectorAll('.volSeN').forEach(x => x.textContent = VOL.se);
+  document.querySelectorAll('.mutebtn').forEach(x => { x.textContent = MUTED ? '音 オフ' : '音 オン'; x.classList.toggle('on', !MUTED); });
 }
 applyVol();
 
@@ -2804,6 +2817,7 @@ function showCardGuide(){
 }
 $('#btnHow').addEventListener('click', showHowto);
 $('#btnVol').addEventListener('click', () => $('#volPanel').classList.toggle('on'));
+document.querySelectorAll('.mutebtn').forEach(x => x.addEventListener('click', () => { setMute(!MUTED); if (!MUTED) sfx('ui'); }));
 document.addEventListener('pointerdown', e => { if (!e.target.closest('#volPanel, #btnVol')) $('#volPanel').classList.remove('on'); });
 document.querySelectorAll('.volBgm').forEach(x => x.addEventListener('input', () => setVol('bgm', +x.value)));
 document.querySelectorAll('.volSe').forEach(x => {
