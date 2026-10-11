@@ -758,6 +758,8 @@ const FEVER_AT = 8;
 const FEVER_MS = 4000;
 const REFILL_MS = 420;
 const PLAYER_HP = 60;
+// 版：公開するたびに変える（ホーム画面のアプリは開きっぱなしで古い版のまま動くことがあるので、新しい版があれば読み込み直す）
+const BUILD = '2026-10-11.1';
 const SAVE_KEY = 'hyakki-mekuri.v1';
 const OLD_SAVE_KEY = 'dopa-mekuri.v1'; // 旧名のころの保存（読み込みのみ）
 
@@ -3087,7 +3089,25 @@ $('#btnQuitBattle').addEventListener('click', () => {
 });
 // マップからタイトルへ：マップでは保存済みなのでそのまま戻る
 $('#btnMapTitle').addEventListener('click', () => { save(); enterTitle(); });
-document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); else checkUpdate(); });
+/* ---------- 新しい版の確認 ----------
+   開いたとき・戻ってきたときに、公開されている index.html の BUILD を見る（1分に1回まで）。
+   新しければ、タイトルの画面ならすぐ読み込み直し、ほかの画面では知らせてタイトルに戻ったときに読み込み直す（保存は残る） */
+let updWait = false, updAt = 0, updTo = '';
+// 古い版を覚えている入れ物を通らないよう、版の名前をつけた住所で開き直す
+const reloadNew = () => location.replace(location.pathname + '?v=' + encodeURIComponent(updTo));
+async function checkUpdate(){
+  if (updWait || !/^https?:/.test(location.protocol) || Date.now() - updAt < 60000) return;
+  updAt = Date.now();
+  try {
+    const r = await fetch(location.pathname + '?v=' + Date.now(), { cache:'no-store' });
+    const m = (await r.text()).match(/const BUILD = '([^']+)'/);
+    if (!m || m[1] === BUILD) return;
+    updWait = true; updTo = m[1];
+    if ($('#title').classList.contains('on')) reloadNew();
+    else toast('新しい版があります。タイトルに戻ると更新します');
+  } catch(e){}
+}
 window.addEventListener('pagehide', () => snapBattle());
 
 $('#btnNew').addEventListener('click', () => {
@@ -3135,6 +3155,7 @@ function showRelics(back){
     items: run.relics.map(id => ({ html:relicHTML(id), cls:'' })), btn:{ label:'もどる', on:back } });
 }
 function enterTitle(){
+  if (updWait){ reloadNew(); return; }
   ui.titleInfo = false;
   applyUnlocks();
   const meta = loadMeta();
@@ -3183,9 +3204,10 @@ function exportCode(){
 }
 function parseCode(code){
   try {
-    const t = (code || '').replace(/\s+/g, '');
-    if (!t.startsWith(MOVE_HEAD)) return null;
-    const bin = atob(t.slice(MOVE_HEAD.length));
+    // 欄に前の文字や2回分の貼り付けが混ざっていても、最初の「HYAKKI1:…」だけを取り出す
+    const m = (code || '').replace(/[\s\u200b\u2060\ufeff]+/g, '').match(/HYAKKI1:([A-Za-z0-9+\/]+=*)/);
+    if (!m) return null;
+    const bin = atob(m[1]);
     const d = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0))));
     return d && typeof d === 'object' && d.meta && typeof d.meta === 'object' ? d : null;
   } catch(e){ return null; }
@@ -3211,7 +3233,7 @@ function confirmImport(code){
     const t = (code || '').trim();
     if (!t) return toast('欄が空です。コピーしたコードを貼り付けてください');
     const head = t.replace(/\s+/g, ' ').slice(0, 14);
-    return toast(t.replace(/\s+/g, '').startsWith(MOVE_HEAD)
+    return toast(t.includes(MOVE_HEAD)
       ? 'コードが途中で切れているようです。コピーし直して、全部貼り付けてください'
       : `引き継ぎのコードではありません（貼り付けた文字の先頭：「${head}…」）。元の場所で「コードをコピー」し直してください`);
   }
@@ -3494,6 +3516,7 @@ $('#ascUp').addEventListener('click', () => { ui.asc = Math.min(loadMeta().maxAs
 document.querySelectorAll('.title-note, .logo-sub, .ovnote').forEach(wrapJP);
 enterTitle();
 a2hsNotice();
+checkUpdate();
 // 拡大させない。iPhone（Safari も Chrome も中身は同じ）は user-scalable=no を無視するので、二本指の操作そのものを止める
 document.addEventListener('dblclick', e => e.preventDefault());
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive:false }));
