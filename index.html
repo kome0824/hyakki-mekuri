@@ -370,6 +370,13 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
 .endov.lose b{color:#b8b0a0;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 var(--sumi)}
 .endov.lose span{color:var(--sub)}
 @keyframes endbg{from{opacity:0}to{opacity:1}}
+/* 戦闘の始まり：「勝負！」（INTRO_MS と同じ0.9秒で出て消える。押せないので下の札には触れない） */
+.startov{position:absolute;inset:calc(var(--u)*-1);z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border-radius:calc(var(--u)*1.6);background:rgba(23,22,29,.6);pointer-events:none;animation:startov .9s both}
+.startov span{font-family:var(--mincho);font-size:calc(var(--u)*4.6);color:var(--kin);margin-bottom:calc(var(--u)*2)}
+.startov b{font-family:var(--mincho);font-size:calc(var(--u)*17);font-weight:900;line-height:1;color:var(--paper);
+  text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 var(--shu);animation:endst .45s cubic-bezier(.2,1.5,.4,1)}
+@keyframes startov{0%{opacity:0}12%{opacity:1}78%{opacity:1}100%{opacity:0}}
 @keyframes endst{0%{transform:scale(2.6);opacity:0}60%{transform:scale(.95);opacity:1}100%{transform:scale(1)}}
 /* 画面が切り替わった直後は、連打の勢いで選んでしまわないよう少しのあいだ押せない */
 .screen.guard{pointer-events:none}
@@ -813,8 +820,21 @@ function startBattle(foeId){
   dexNote('f', foeId);
   showBattle();
   log(`${f.n} があらわれた！`);
+  battleIntro(kind);
   snapBattle();
 }
+// 戦闘の始まりの短い間：「勝負！」を出し、その間は時間を止めて札もめくれない
+const INTRO_MS = 900;
+function battleIntro(kind){
+  B.introUntil = performance.now() + INTRO_MS;
+  const d = document.createElement('div');
+  d.className = 'startov';
+  d.innerHTML = `<span>${kind === 'boss' ? '幕の主　' : kind === 'elite' ? '強敵　' : ''}${B.f.n} があらわれた</span><b>勝負！</b>`;
+  $('#board').appendChild(d);
+  setTimeout(() => d.remove(), INTRO_MS);
+  sfx('foe');
+}
+const inIntro = () => !!B && B.introUntil > performance.now();
 /* ---------- 戦闘の途中保存 ----------
    盤面・山札・HP・防御・連続・百鬼夜行・敵の行動ゲージまで丸ごと保存し、同じ所から再開する。
    開いていた札は伏せ直し、そろえて空いていた所は再開時に補充する。 */
@@ -927,7 +947,7 @@ function mute(hex, k = .35){
 
 /* ---------- 操作 ---------- */
 function tap(i){
-  if (!B || B.over || B.paused) return;
+  if (!B || B.over || B.paused || inIntro()) return;
   const s = B.slots[i];
   if (!s || s.st !== 'down' || s.frozenUntil > B.t) return;
   B.stats.taps++;
@@ -2329,7 +2349,7 @@ function loop(now){
   if (!B || B.over) return;
   const dt = Math.min(60, now - B.last);
   B.last = now;
-  if (!B.paused) update(dt * DEBUG.speed);
+  if (!B.paused && !inIntro()) update(dt * DEBUG.speed);
   requestAnimationFrame(loop);
 }
 function update(dt){
