@@ -1,0 +1,2797 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#17161d">
+<title>百鬼めくり</title>
+<style>
+/* 縦画面1枚。375×667 を 100×177.9 単位(--u)で組む
+   見た目の方針：百鬼夜行の夜と「札」。墨の夜・和紙・朱・金・藍の5色を基本に、
+   グラデーションや光彩は使わず、平らな面と細い線で組む。見出しと札の字は明朝。 */
+:root{
+  color-scheme:dark;
+  --u: min(1vw, 0.5622vh);
+  --bg:#17161d;      /* 墨の夜 */
+  --bg2:#1f1d26;
+  --panel:#24222c;   /* 面 */
+  --line:#3a3644;    /* 細い線 */
+  --ink:#ece3cf;     /* 和紙（暗い地の上の文字） */
+  --sub:#9d9483;     /* 補足の文字 */
+  --paper:#ece3cf;   /* 札の表 */
+  --sumi:#2a2622;    /* 和紙の上の墨 */
+  --shu:#c4412b;     /* 朱 */
+  --kin:#c9a14a;     /* 金 */
+  --ai:#3c5a86;      /* 藍 */
+  --matcha:#6f9a4e;  /* 自分のHP */
+  /* 旧名の色（演出から参照している分を新しい色に寄せる） */
+  --yellow:var(--kin); --pink:var(--shu); --red:#d4543c; --green:var(--matcha); --blue:#6f8fc0; --cyan:#7aa7a0;
+  --font:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Noto Sans CJK JP","Yu Gothic",sans-serif;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP","Noto Serif CJK JP",serif;
+}
+@supports (height:1dvh){ :root{ --u: min(1vw, 0.5622dvh); } }
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--ink);overflow:hidden;font-family:var(--font);font-weight:700;
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+body{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}
+body{display:flex;align-items:center;justify-content:center;background:var(--bg)}
+#app{position:relative;width:calc(var(--u)*100);height:calc(var(--u)*177.9);font-size:calc(var(--u)*4);overflow:hidden}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center}
+.screen.on{display:flex}
+button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
+.btn{display:block;min-width:calc(var(--u)*56);padding:calc(var(--u)*3.2) calc(var(--u)*5);border-radius:calc(var(--u)*1.2);
+  background:var(--shu);color:var(--paper);font-weight:900;font-size:calc(var(--u)*5);letter-spacing:.08em;border:1px solid #e0705a}
+.btn:active{transform:translateY(1px);filter:brightness(.92)}
+.btn.sub{background:var(--panel);color:var(--ink);border-color:var(--line)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+
+/* ---------- タイトル ---------- */
+#title{justify-content:center;gap:calc(var(--u)*4)}
+.logo{font-family:var(--mincho);font-size:calc(var(--u)*15);font-weight:900;line-height:1;letter-spacing:calc(var(--u)*.6);color:var(--paper);
+  padding-bottom:calc(var(--u)*2);border-bottom:calc(var(--u)*.6) solid var(--shu)}
+.logo-sub{font-family:var(--mincho);color:var(--kin);font-size:calc(var(--u)*3.8);letter-spacing:.12em}
+.title-note{color:var(--sub);font-size:calc(var(--u)*3.4);text-align:center;line-height:1.7;font-weight:500}
+
+#sndRow{position:absolute;right:calc(var(--u)*3);top:calc(var(--u)*3);display:flex;gap:calc(var(--u)*1.6)}
+.sndrow2{display:flex;gap:calc(var(--u)*2)}
+.title-links{position:absolute;left:0;right:0;bottom:calc(var(--u)*7);display:flex;justify-content:center;gap:calc(var(--u)*3)}
+.title-links .btn{min-width:calc(var(--u)*26.5);padding:calc(var(--u)*2.2) calc(var(--u)*3);font-size:calc(var(--u)*3.8)}
+.mini.info{font-family:var(--mincho)}
+.title-meta{color:var(--sub);font-size:calc(var(--u)*3.3);text-align:center;line-height:1.6}
+.asc{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*1.2);width:calc(var(--u)*84)}
+.ascsel{display:flex;align-items:center;gap:calc(var(--u)*4);font-size:calc(var(--u)*4.6)}
+.ascsel b{font-family:var(--mincho);color:var(--shu);min-width:calc(var(--u)*30);text-align:center}
+.ascsel button{width:calc(var(--u)*10);height:calc(var(--u)*10);border-radius:50%;background:var(--panel);border:1px solid var(--line);font-size:calc(var(--u)*4)}
+.ascdesc{color:var(--sub);font-size:calc(var(--u)*3);text-align:center;line-height:1.5;min-height:3em;font-weight:500}
+.rsub b{color:var(--kin)}
+.heat{display:inline-block;font-family:var(--mincho);font-size:calc(var(--u)*6);color:var(--shu);font-weight:900;margin-bottom:calc(var(--u)*1)}
+.heat b{color:var(--shu);font-size:1.3em}
+
+/* ---------- 戦闘 ---------- */
+#battle{padding-top:calc(var(--u)*2)}
+.topbar{width:calc(var(--u)*94);display:flex;justify-content:space-between;align-items:center;font-size:calc(var(--u)*3.4);color:var(--sub)}
+.topbar b{color:var(--ink)}
+#fPile,#fDisc{font-variant-numeric:tabular-nums}
+.stage{position:relative;width:calc(var(--u)*94);height:calc(var(--u)*40);margin-top:calc(var(--u)*1.2);border-radius:calc(var(--u)*1.6);overflow:hidden;
+  background:#141620;border:1px solid var(--line)}
+.moon{position:absolute;left:calc(var(--u)*5);top:calc(var(--u)*2.6);width:calc(var(--u)*6.5);height:calc(var(--u)*6.5);border-radius:50%;background:var(--paper)}
+.lant{position:absolute;left:calc(var(--u)*16);right:calc(var(--u)*26);top:calc(var(--u)*3.4);display:flex;justify-content:space-between;
+  border-top:1px solid rgba(236,227,207,.18);padding-top:calc(var(--u)*.6)}
+.lant i{width:calc(var(--u)*2.2);height:calc(var(--u)*3);border-radius:35%;background:var(--shu);animation:lant 1.6s ease-in-out infinite alternate}
+.lant i:nth-child(2n){animation-delay:-.8s}
+@keyframes lant{to{opacity:.6;transform:rotate(6deg)}}
+.road{position:absolute;left:0;right:0;bottom:0;height:calc(var(--u)*6);
+  background:repeating-linear-gradient(90deg,#24222c 0 calc(var(--u)*6),#1d1b24 calc(var(--u)*6) calc(var(--u)*12));animation:road 1.1s linear infinite}
+@keyframes road{to{background-position:calc(var(--u)*-12) 0}}
+.parade{position:absolute;left:calc(var(--u)*2);bottom:calc(var(--u)*3.4);width:calc(var(--u)*58);height:calc(var(--u)*10);
+  display:flex;align-items:flex-end;justify-content:flex-end;gap:calc(var(--u)*.6)}
+/* 妖怪（仮のドット絵）。輪郭が夜に沈まないよう淡く光らせる */
+.yk{position:relative;flex:none;width:calc(var(--u)*7.6);height:calc(var(--u)*7.6);animation:bob .5s ease-in-out infinite alternate;
+  filter:drop-shadow(0 0 calc(var(--u)*.35) rgba(236,227,207,.45))}
+.yk svg,.foe svg{display:block;width:100%;height:100%}
+.yk.new{animation:yknew .3s cubic-bezier(.2,1.6,.4,1),bob .5s .3s ease-in-out infinite alternate}
+@keyframes bob{to{transform:translateY(calc(var(--u)*-1))}}
+@keyframes yknew{0%{transform:translateY(calc(var(--u)*-8)) scale(.3)}100%{transform:none}}
+.yk.flee{animation:flee .5s ease-in forwards}
+@keyframes flee{to{transform:translate(calc(var(--u)*-6),calc(var(--u)*-10)) rotate(-30deg);opacity:0}}
+.parade.hurt .yk{animation:ykhurt .3s}
+@keyframes ykhurt{30%{transform:translateX(calc(var(--u)*-1.5));filter:brightness(1.6) saturate(0)}}
+.parade.glow .yk{outline:calc(var(--u)*.5) solid var(--matcha)}
+.run{position:absolute;z-index:1;opacity:.8;animation:run 1.3s linear forwards}
+@keyframes run{from{transform:translateX(0)}to{transform:translateX(calc(var(--u)*110))}}
+.barrier{position:absolute;left:calc(var(--u)*61);bottom:calc(var(--u)*3);width:calc(var(--u)*1.2);height:calc(var(--u)*14);border-radius:calc(var(--u)*.6);
+  background:var(--blue);opacity:0;transition:opacity .2s}
+.barrier.on{opacity:.85}
+.barrier.ping{animation:ping .35s}
+@keyframes ping{40%{transform:scaleX(2.4)}}
+.slash{position:absolute;z-index:4;left:calc(var(--u)*20);bottom:calc(var(--u)*5);width:calc(var(--u)*40);height:calc(var(--u)*.8);
+  background:var(--shu);transform:rotate(-18deg);animation:slash .3s ease-out forwards}
+@keyframes slash{0%{clip-path:inset(0 100% 0 0)}60%{clip-path:inset(0 0 0 0);opacity:1}100%{opacity:0}}
+.bolt{position:absolute;z-index:4;right:calc(var(--u)*11);top:0;width:calc(var(--u)*3);height:calc(var(--u)*20);background:var(--kin);
+  clip-path:polygon(40% 0,100% 0,60% 40%,100% 40%,20% 100%,40% 52%,0 52%);animation:bolt .3s ease-out forwards}
+@keyframes bolt{0%{opacity:1}70%{opacity:1}100%{opacity:0}}
+.impact{position:absolute;z-index:4;width:calc(var(--u)*12);height:calc(var(--u)*12);margin:calc(var(--u)*-6) 0 0 calc(var(--u)*-6);border-radius:50%;
+  border:calc(var(--u)*1.2) solid var(--c);animation:impact .3s ease-out forwards}
+@keyframes impact{0%{transform:scale(.3);opacity:1}100%{transform:scale(1.4);opacity:0}}
+/* 味方の妖怪の攻撃 */
+.yk.atk{position:absolute;z-index:5;animation:none;margin:0}
+.cut{position:absolute;z-index:6;width:calc(var(--u)*24);height:calc(var(--u)*1);margin:calc(var(--u)*-.5) 0 0 calc(var(--u)*-12);
+  background:var(--paper);animation:cut .32s ease-out forwards}
+@keyframes cut{0%{clip-path:inset(0 100% 0 0)}45%{clip-path:inset(0 0 0 0);opacity:1}100%{clip-path:inset(0 0 0 0);opacity:0}}
+.boom{position:absolute;z-index:6;width:calc(var(--u)*30);height:calc(var(--u)*30);margin:calc(var(--u)*-15) 0 0 calc(var(--u)*-15);border-radius:50%;
+  background:var(--shu);animation:boom .5s ease-out forwards}
+@keyframes boom{0%{transform:scale(.2);opacity:.95}60%{opacity:.7}100%{transform:scale(1.3);opacity:0}}
+.flame{position:absolute;z-index:6;width:calc(var(--u)*4);height:calc(var(--u)*6);margin:calc(var(--u)*-3) 0 0 calc(var(--u)*-2);
+  border-radius:50% 50% 50% 50%/60% 60% 40% 40%;background:#d0602e;animation:flame .55s ease-out forwards}
+@keyframes flame{0%{transform:translate(0,0) scale(.6);opacity:1}100%{transform:translate(var(--dx),calc(var(--u)*-12)) scale(1.3);opacity:0}}
+.needle{position:absolute;z-index:6;width:calc(var(--u)*.8);height:calc(var(--u)*7);margin-left:calc(var(--u)*-.4);
+  background:#a9c6d6;animation:needle .22s ease-in forwards}
+@keyframes needle{0%{transform:translateY(calc(var(--u)*-22));opacity:0}30%{opacity:1}100%{transform:translateY(0);opacity:1}}
+.orb{position:absolute;z-index:6;width:calc(var(--u)*2.2);height:calc(var(--u)*2.2);margin:calc(var(--u)*-1.1) 0 0 calc(var(--u)*-1.1);border-radius:50%;
+  background:var(--matcha);transition:transform .45s ease-in,opacity .45s ease-in}
+.seal{position:absolute;z-index:6;width:calc(var(--u)*24);height:calc(var(--u)*24);margin:calc(var(--u)*-12) 0 0 calc(var(--u)*-12);border-radius:50%;
+  border:calc(var(--u)*.6) dashed var(--paper);color:var(--paper);font-family:var(--mincho);font-size:calc(var(--u)*7);font-weight:900;
+  display:flex;align-items:center;justify-content:center;animation:seal .75s ease-out forwards}
+@keyframes seal{0%{transform:scale(1.6) rotate(0);opacity:0}30%{transform:scale(1) rotate(60deg);opacity:1}100%{transform:scale(.9) rotate(140deg);opacity:0}}
+.clock{position:absolute;z-index:6;width:calc(var(--u)*20);height:calc(var(--u)*20);margin:calc(var(--u)*-10) 0 0 calc(var(--u)*-10);border-radius:50%;
+  border:calc(var(--u)*.6) solid var(--paper);animation:clockf .7s ease-out forwards}
+.clock::after{content:"";position:absolute;left:50%;top:50%;width:calc(var(--u)*.6);height:calc(var(--u)*8);margin-left:calc(var(--u)*-.3);
+  background:var(--paper);transform-origin:50% 0;animation:hand .7s linear forwards}
+@keyframes clockf{0%,70%{opacity:1}100%{opacity:0}}
+@keyframes hand{from{transform:rotate(180deg)}to{transform:rotate(-180deg)}}
+.eyefx{position:absolute;z-index:6;width:calc(var(--u)*16);height:calc(var(--u)*8);margin:calc(var(--u)*-4) 0 0 calc(var(--u)*-8);border-radius:50%;
+  background:radial-gradient(circle,var(--sumi) 0 24%,var(--paper) 25% 100%);animation:eyefx .5s ease-out forwards}
+@keyframes eyefx{0%{transform:scaleY(0)}30%{transform:scaleY(1)}80%{transform:scaleY(1);opacity:1}100%{transform:scaleY(0);opacity:0}}
+.snum{position:absolute;z-index:7;font-weight:900;font-size:calc(var(--u)*7);color:var(--paper);-webkit-text-stroke:calc(var(--u)*.35) var(--sumi);
+  transform:translate(-50%,-50%);animation:snum .7s ease-out forwards;white-space:nowrap;font-variant-numeric:tabular-nums}
+.snum.big{font-size:calc(var(--u)*10);color:var(--kin)}
+@keyframes snum{0%{transform:translate(-50%,-30%) scale(1.8);opacity:0}20%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-50%,-150%);opacity:0}}
+.parade.power .yk{outline:calc(var(--u)*.5) solid var(--shu);animation:power .5s ease-out}
+@keyframes power{40%{transform:scale(1.25) translateY(calc(var(--u)*-1.5))}}
+.coinfx{position:absolute;z-index:6;width:calc(var(--u)*3.2);height:calc(var(--u)*3.2);margin:calc(var(--u)*-1.6) 0 0 calc(var(--u)*-1.6);border-radius:50%;
+  background:var(--kin);border:calc(var(--u)*.4) solid #8a6d2c;animation:coinfx .6s ease-out forwards}
+@keyframes coinfx{0%{transform:translate(0,0)}40%{transform:translate(var(--dx),calc(var(--u)*-9))}100%{transform:translate(var(--dx),calc(var(--u)*-14));opacity:0}}
+.ename{position:absolute;right:calc(var(--u)*24);top:calc(var(--u)*7.6);font-family:var(--mincho);font-size:calc(var(--u)*4);font-weight:900;text-align:right}
+.etags{position:absolute;right:calc(var(--u)*24);top:calc(var(--u)*13);justify-content:flex-end;max-width:calc(var(--u)*34)}
+.foe{position:absolute;right:calc(var(--u)*3);bottom:calc(var(--u)*3.4);z-index:2;width:calc(var(--u)*19);height:calc(var(--u)*19);display:flex;align-items:center;justify-content:center;
+  font-family:var(--mincho);font-size:calc(var(--u)*10.5);font-weight:900;color:var(--paper);
+  filter:drop-shadow(0 0 calc(var(--u)*.5) rgba(236,227,207,.5))}
+.foe::after{content:"";position:absolute;left:15%;right:15%;bottom:calc(var(--u)*-1);height:calc(var(--u)*1.6);border-radius:50%;background:rgba(0,0,0,.45);z-index:-1}
+.foe.hit{animation:foehit .25s}
+@keyframes foehit{30%{transform:translateX(calc(var(--u)*-2)) scale(.92);filter:brightness(1.5)}70%{transform:translateX(calc(var(--u)*1.5))}}
+.foe.act{animation:foeact .35s}
+@keyframes foeact{40%{transform:translateX(calc(var(--u)*-22)) scale(1.12)}}
+.bar{position:relative;height:calc(var(--u)*4.6);border-radius:calc(var(--u)*.6);background:#0f0e14;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;transition:width .18s}
+.bar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*3.2)}
+.bar.hp i{background:var(--shu)}
+.bar.php i{background:var(--matcha)}
+.srow{display:flex;align-items:center;gap:calc(var(--u)*2);height:calc(var(--u)*6.4)}
+.srow .bar{flex:1}
+.tags{display:flex;gap:calc(var(--u)*1.2);flex-wrap:wrap;font-size:calc(var(--u)*3)}
+.tag{padding:calc(var(--u)*.3) calc(var(--u)*1.6);border-radius:calc(var(--u)*.6);background:#0f0e14;border:1px solid var(--line)}
+.tag.blk{color:var(--blue)} .tag.burn{color:#d0602e} .tag.weak{color:var(--cyan)} .tag.str{color:var(--kin)}
+.combo{width:calc(var(--u)*94);height:calc(var(--u)*6);margin-top:calc(var(--u)*.6);display:flex;align-items:center;justify-content:space-between}
+.combo .cnum{font-size:calc(var(--u)*5);font-weight:900;color:var(--kin);font-variant-numeric:tabular-nums}
+.combo .cnum small{font-size:.6em;color:var(--sub);margin-left:.3em}
+.combo .cbar{flex:1;margin-left:calc(var(--u)*3);height:calc(var(--u)*1.6);border-radius:calc(var(--u)*.8);background:#0f0e14;overflow:hidden}
+.combo .cbar i{display:block;height:100%;width:0;background:var(--kin)}
+.board{position:relative;display:grid;grid-template-columns:repeat(4,calc(var(--u)*22));grid-template-rows:repeat(4,calc(var(--u)*22));
+  gap:calc(var(--u)*1.6);justify-content:center;margin-top:calc(var(--u)*.8);perspective:calc(var(--u)*200)}
+.slot{position:relative;touch-action:manipulation}
+.card{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .13s ease-out}
+.slot.open .card{transform:rotateY(180deg) scale(1.05)}
+.slot.peek .card{transform:rotateY(180deg) scale(.92)}
+.slot.empty .card{transform:scale(0);transition:transform .15s ease-in}
+.face{position:absolute;inset:0;border-radius:calc(var(--u)*1.6);backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden}
+/* 札の裏：藍の地に金の細い枠と「鬼」の紋 */
+.back{background:#2a3550;border:1px solid #11141d;box-shadow:inset 0 0 0 calc(var(--u)*1.2) #2a3550,inset 0 0 0 calc(var(--u)*1.5) rgba(201,161,74,.55);
+  display:flex;align-items:center;justify-content:center;color:rgba(201,161,74,.5);font-family:var(--mincho);font-size:calc(var(--u)*7);font-weight:900}
+/* 札の表：地を技の色で塗る（色で見分ける）。和紙色の細い枠と字、薄い形の紋 */
+.front{transform:rotateY(180deg);display:flex;align-items:center;justify-content:center;background:var(--k,var(--sumi));color:var(--paper);
+  border:1px solid rgba(0,0,0,.4);box-shadow:inset 0 0 0 calc(var(--u)*1) var(--k,var(--sumi)),inset 0 0 0 calc(var(--u)*1.25) rgba(236,227,207,.6)}
+.front .mon,.mini .mon{position:absolute;left:14%;top:14%;width:72%;height:72%;fill:rgba(236,227,207,.17)}
+.front .kj{position:relative;font-family:var(--mincho);font-size:calc(var(--u)*12);font-weight:900;line-height:1}
+.front .nv{position:absolute;right:calc(var(--u)*2);top:calc(var(--u)*1.6);font-size:calc(var(--u)*3.4);font-weight:900;color:var(--paper);font-variant-numeric:tabular-nums}
+.front .pl{position:absolute;left:calc(var(--u)*2);top:calc(var(--u)*1.4);font-size:calc(var(--u)*3.4);color:var(--kin)}
+.slot.peek .front{filter:brightness(.78) saturate(.85)}   /* 見えているだけの札は少し暗く小さく（色は見分けられる程度） */
+.slot.open .front{outline:calc(var(--u)*.8) solid var(--kin);outline-offset:calc(var(--u)*.3)}   /* 押して開いた札は金の枠 */
+.tapring{position:absolute;width:calc(var(--u)*16);height:calc(var(--u)*16);margin:calc(var(--u)*-8) 0 0 calc(var(--u)*-8);border-radius:50%;
+  border:calc(var(--u)*.6) solid var(--kin);animation:tapring .28s ease-out forwards}
+@keyframes tapring{0%{transform:scale(.4);opacity:.9}100%{transform:scale(1.25);opacity:0}}
+.slot.frozen .back{background:#9fb6c4;color:#2a3550;box-shadow:inset 0 0 0 calc(var(--u)*1.2) #9fb6c4,inset 0 0 0 calc(var(--u)*1.5) #2a3550}
+.slot.frozen .back::after{content:"凍";font-size:calc(var(--u)*8)}
+.slot.frozen .back{font-size:0}
+.slot.closing .front{filter:brightness(.6)}
+.slot.pop .card{animation:pop .22s ease-out}
+@keyframes pop{0%{transform:rotateY(180deg) scale(1)}50%{transform:rotateY(180deg) scale(1.2)}100%{transform:rotateY(180deg) scale(0)}}
+/* 戦闘のメッセージ：連続ゲージのすぐ下。1行固定（長さで盤面が動かないよう、長いときは…で詰める） */
+.log{width:calc(var(--u)*94);height:calc(var(--u)*5);line-height:calc(var(--u)*5);text-align:center;font-size:calc(var(--u)*3.5);color:var(--sub);font-weight:500;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pausebtn{padding:calc(var(--u)*1) calc(var(--u)*2.4);border-radius:calc(var(--u)*.8);background:var(--panel);border:1px solid var(--line);font-size:calc(var(--u)*3.2)}
+.overlay{position:absolute;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u)*4);
+  background:rgba(23,22,29,.92)}
+.overlay.on{display:flex}
+.overlay h2{font-family:var(--mincho);font-size:calc(var(--u)*9);color:var(--paper)}
+.ovnote{width:calc(var(--u)*76);text-align:center;font-size:calc(var(--u)*3.2);color:var(--sub);line-height:1.6;font-weight:500}
+/* 一時停止中のお守り一覧（上＝名前、下＝説明） */
+.ovrel{width:calc(var(--u)*88);border-top:1px solid var(--line);padding-top:calc(var(--u)*2)}
+.ovrel-t{font-family:var(--mincho);font-size:calc(var(--u)*3.8);margin-bottom:calc(var(--u)*1.4)}
+.ovrel-list{max-height:calc(var(--u)*52);overflow-y:auto;display:flex;flex-direction:column;gap:calc(var(--u)*1.4)}
+.ovrel-list .pick{padding:calc(var(--u)*1.6) calc(var(--u)*2)}
+.ovrel-list .mini{width:calc(var(--u)*10);height:calc(var(--u)*10);font-size:calc(var(--u)*5.6)}
+.ovrel-list .pick .nm{font-size:calc(var(--u)*3.8)}
+.ovrel-list .pick .ds{font-size:calc(var(--u)*3)}
+.mrow2{display:flex;justify-content:space-between;align-items:flex-start;gap:calc(var(--u)*2)}
+.mrow2 .rrow{flex:1;min-width:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;min-height:calc(var(--u)*7)}
+.mrow2 .rrow::-webkit-scrollbar{display:none}
+.mrow2 .rchip{flex:none}   /* お守りが増えても1行のまま（横にスクロール） */
+.mrow2 .pausebtn{flex:none}
+
+/* ---------- 演出 ---------- */
+#fx{position:absolute;inset:0;pointer-events:none;z-index:15;overflow:hidden}
+.sp{position:absolute;width:calc(var(--u)*2);height:calc(var(--u)*2);margin:calc(var(--u)*-1) 0 0 calc(var(--u)*-1);
+  animation:sp .6s cubic-bezier(.15,.8,.3,1) forwards}
+@keyframes sp{0%{transform:translate(0,0) scale(1.3) rotate(0);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.2) rotate(90deg);opacity:0}}
+.rg{position:absolute;width:calc(var(--u)*24);height:calc(var(--u)*24);margin:calc(var(--u)*-12) 0 0 calc(var(--u)*-12);border-radius:50%;
+  border:calc(var(--u)*1) solid var(--c);animation:rg .45s ease-out forwards}
+@keyframes rg{0%{transform:scale(.3);opacity:1}100%{transform:scale(1.4);opacity:0}}
+.num{position:absolute;transform:translate(-50%,-50%);font-weight:900;font-size:calc(var(--u)*8);white-space:nowrap;font-variant-numeric:tabular-nums;
+  -webkit-text-stroke:calc(var(--u)*.4) var(--sumi);animation:num .8s ease-out forwards}
+.num.big{font-size:calc(var(--u)*12)}
+.num.dmg{color:var(--paper)} .num.hurt{color:var(--red)} .num.heal{color:var(--matcha)} .num.blk{color:var(--blue)}
+@keyframes num{0%{opacity:0;transform:translate(-50%,-20%) scale(.4)}20%{opacity:1;transform:translate(-50%,-70%) scale(1.25)}
+  100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
+#app.shake-s{animation:shs .2s linear}
+#app.shake-l{animation:shl .35s linear}
+@keyframes shs{25%{transform:translate(calc(var(--u)*-.8),calc(var(--u)*.5))}50%{transform:translate(calc(var(--u)*.8),calc(var(--u)*-.5))}75%{transform:translate(calc(var(--u)*-.4),0)}}
+@keyframes shl{15%{transform:translate(calc(var(--u)*-2),calc(var(--u)*1)) rotate(-1deg)}35%{transform:translate(calc(var(--u)*2),calc(var(--u)*-1.2)) rotate(1deg)}
+  55%{transform:translate(calc(var(--u)*-1.2),calc(var(--u)*.6))}75%{transform:translate(calc(var(--u)*.8),0)}}
+.hurtfx{position:absolute;inset:0;z-index:14;pointer-events:none;opacity:0;box-shadow:inset 0 0 0 calc(var(--u)*1.6) var(--shu)}
+.hurtfx.on{animation:hurtfx .45s ease-out}
+@keyframes hurtfx{0%{opacity:1}100%{opacity:0}}
+/* 百鬼夜行中：画面の縁に朱と金の細い枠が脈打つ */
+#battle.fever::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+  box-shadow:inset 0 0 0 calc(var(--u)*1) var(--shu),inset 0 0 0 calc(var(--u)*1.6) var(--kin);animation:feverp .45s ease-in-out infinite alternate}
+@keyframes feverp{to{opacity:.4}}
+.banner{position:absolute;left:0;right:0;top:46%;text-align:center;font-family:var(--mincho);font-weight:900;font-size:calc(var(--u)*15);color:var(--paper);
+  letter-spacing:.06em;text-shadow:calc(var(--u)*.8) calc(var(--u)*.8) 0 var(--shu);animation:banner 1.1s cubic-bezier(.2,1.4,.4,1) forwards}
+@keyframes banner{0%{opacity:0;transform:scale(2.4)}20%{opacity:1;transform:scale(1)}80%{opacity:1;transform:scale(1.03)}100%{opacity:0;transform:scale(.9)}}
+.banner.kill{text-shadow:calc(var(--u)*.8) calc(var(--u)*.8) 0 var(--sumi)}
+.cnum.pop{animation:cpop .25s ease-out}
+@keyframes cpop{40%{transform:scale(1.4)}}
+.foe.dead{animation:dead .7s ease-in forwards}
+@keyframes dead{30%{transform:scale(1.2);filter:brightness(1.6)}100%{transform:scale(.2) rotate(30deg);opacity:0}}
+@media (prefers-reduced-motion: reduce){ #app.shake-s,#app.shake-l{animation:none} }
+
+/* 盤面のすぐ上の帯。各欄の幅は固定（防御などが出ても文字やバーが動かない） */
+.mid{width:calc(var(--u)*92.8);height:calc(var(--u)*12);margin-top:calc(var(--u)*.4);display:flex;align-items:center;gap:calc(var(--u)*2);padding:0 calc(var(--u)*2);
+  border-radius:calc(var(--u)*1.2);background:#0f0e14;border:1px solid var(--line)}
+.mside{flex:1;min-width:0;display:flex;flex-direction:column;gap:calc(var(--u)*1.2)}
+.ma{display:flex;align-items:baseline;justify-content:space-between;height:calc(var(--u)*4.6);font-size:calc(var(--u)*3.7);white-space:nowrap;overflow:hidden}
+.mid b{font-weight:900;font-variant-numeric:tabular-nums}
+.mid b small{font-size:.62em;color:var(--sub);font-weight:700}
+.mid .ic{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:900}   /* 入りきらないときは行動の文字の方を詰める */
+.mid .ic.atk{color:var(--red)} .mid .ic.def{color:var(--blue)} .mid .ic.special{color:var(--kin)}
+#eHp{flex:none;min-width:calc(var(--u)*15);padding-left:calc(var(--u)*1);text-align:right;color:#e07a63}   /* 数字は切らない（足りなければ広がる） */
+#pHp{flex:none;min-width:calc(var(--u)*13);color:var(--matcha)}
+#pHp.low{color:var(--red)}
+.pt{flex:none;min-width:calc(var(--u)*11);text-align:right;font-size:calc(var(--u)*3.1);font-weight:900;visibility:hidden;white-space:nowrap}
+.pt.blk{color:var(--blue)} .pt.str{color:var(--kin)}
+.ptags{display:flex;flex:none}
+.mbar{position:relative;height:calc(var(--u)*1.8);border-radius:calc(var(--u)*.4);background:#23212b;overflow:hidden}
+.mbar i{position:absolute;left:0;top:0;bottom:0;transition:width .18s}
+.mbar.hp i{background:var(--shu)}
+.mbar.php i{background:var(--matcha)}
+.ring{flex:none;width:calc(var(--u)*10);height:calc(var(--u)*10);border-radius:50%;padding:calc(var(--u)*1)}
+.ring span{width:100%;height:100%;border-radius:50%;background:#0f0e14;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mincho);font-size:calc(var(--u)*4.2);font-weight:900;color:var(--paper)}
+.ring.hot{animation:ringhot .3s ease-in-out infinite alternate}
+@keyframes ringhot{to{transform:scale(1.08)}}
+
+/* 退散・敗北は盤面の真上に出す（盤面を見ていても気づけるように） */
+#battle.ended .slot{filter:grayscale(.7) brightness(.45);transition:filter .3s}
+.endov{position:absolute;inset:calc(var(--u)*-1);z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border-radius:calc(var(--u)*1.6);background:rgba(23,22,29,.55);animation:endbg .3s ease-out}
+.endov b{font-family:var(--mincho);font-size:calc(var(--u)*18);font-weight:900;line-height:1;color:var(--paper);
+  text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 var(--shu);animation:endst .55s cubic-bezier(.2,1.5,.4,1)}
+.endov span{margin-top:calc(var(--u)*3);font-family:var(--mincho);font-size:calc(var(--u)*4.8);color:var(--kin);animation:endbg .5s .25s both}
+.endov.lose b{color:#b8b0a0;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 var(--sumi)}
+.endov.lose span{color:var(--sub)}
+@keyframes endbg{from{opacity:0}to{opacity:1}}
+@keyframes endst{0%{transform:scale(2.6);opacity:0}60%{transform:scale(.95);opacity:1}100%{transform:scale(1)}}
+/* 画面が切り替わった直後は、連打の勢いで選んでしまわないよう少しのあいだ押せない */
+.screen.guard{pointer-events:none}
+.screen.guard .pick,.screen.guard .btn,.screen.guard .node{opacity:.4}
+.pick,.btn,.node{transition:opacity .25s}
+
+/* ---------- マップ ---------- */
+#map{padding-top:calc(var(--u)*19)}
+.mhead.runbar{position:absolute;left:calc(var(--u)*3);top:calc(var(--u)*2);z-index:12;display:none}
+.mhead.runbar.on{display:flex}   /* .mhead の display より強くする（戦闘・タイトルでは確実に隠す） */
+.mhead{width:calc(var(--u)*94);display:flex;flex-direction:column;gap:calc(var(--u)*1.6)}
+.mrow{display:flex;justify-content:space-between;align-items:center;font-size:calc(var(--u)*3.6)}
+.mrow b{color:var(--kin)}
+.rrow{display:flex;gap:calc(var(--u)*1.4);flex-wrap:wrap;min-height:calc(var(--u)*7)}
+/* お守りの小札（タップで名前と説明） */
+.rchip{width:calc(var(--u)*7);height:calc(var(--u)*7);border-radius:50%;background:var(--sumi);color:var(--kin);font-family:var(--mincho);font-size:calc(var(--u)*3.8);
+  display:flex;align-items:center;justify-content:center;border:1px solid var(--kin)}
+.rchip.boss{color:var(--shu);border-color:var(--shu)}
+.brel{width:calc(var(--u)*94);height:calc(var(--u)*6);min-height:0;margin-top:calc(var(--u)*.8);flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.brel::-webkit-scrollbar{display:none}
+.brel .rchip{flex:none;width:calc(var(--u)*6);height:calc(var(--u)*6);font-size:calc(var(--u)*3.2)}
+.mscroll{flex:1;width:100%;overflow-y:auto;margin-top:calc(var(--u)*1);-webkit-overflow-scrolling:touch}
+.mbox{position:relative;width:100%}
+.mbox svg{position:absolute;left:0;top:0}
+.mbox line{stroke:#3a3644;stroke-width:2;stroke-dasharray:4 6}
+.mbox line.walked{stroke:var(--kin);stroke-dasharray:none}
+.node{position:absolute;width:calc(var(--u)*12);height:calc(var(--u)*12);margin:calc(var(--u)*-6) 0 0 calc(var(--u)*-6);border-radius:50%;
+  background:var(--panel);border:1px solid var(--line);color:var(--sub);font-family:var(--mincho);font-size:calc(var(--u)*5.6);font-weight:900;
+  display:flex;align-items:center;justify-content:center}
+.node.t-elite{color:var(--red)} .node.t-rest{color:var(--matcha)} .node.t-shop{color:var(--kin)} .node.t-event{color:var(--cyan)} .node.t-treasure{color:var(--kin)}
+.node.t-boss{width:calc(var(--u)*20);height:calc(var(--u)*20);margin:calc(var(--u)*-10) 0 0 calc(var(--u)*-10);font-size:calc(var(--u)*10);background:var(--shu);color:var(--paper);border-color:var(--sumi)}
+.node.done{opacity:.4}
+.node.here{opacity:1;border:calc(var(--u)*.6) solid var(--kin)}
+/* 次に行ける所：和紙色の札にして、金の輪が呼吸する */
+.node.can{background:var(--paper);color:var(--sumi);border-color:var(--kin)}
+.node.can::after{content:"";position:absolute;inset:calc(var(--u)*-1.4);border-radius:50%;border:calc(var(--u)*.5) solid var(--kin);animation:nodepulse 1.2s ease-in-out infinite}
+@keyframes nodepulse{50%{transform:scale(1.15);opacity:.2}}
+.board.stir{animation:stir .4s}
+@keyframes stir{25%{transform:rotate(-2deg)}75%{transform:rotate(2deg)}}
+.toast{position:absolute;left:50%;bottom:calc(var(--u)*8);transform:translateX(-50%);z-index:40;width:max-content;max-width:calc(var(--u)*88);
+  padding:calc(var(--u)*2.4) calc(var(--u)*4);border-radius:calc(var(--u)*1.2);background:var(--sumi);border:1px solid var(--kin);color:var(--ink);
+  font-size:calc(var(--u)*3.4);text-align:left;opacity:0;pointer-events:none}
+.toast .tn{font-family:var(--mincho);font-size:calc(var(--u)*4.4);color:var(--kin);font-weight:900}
+.toast .td{margin-top:calc(var(--u)*1);font-weight:500;line-height:1.5}
+.toast.on{animation:toast 2.6s ease forwards}
+@keyframes toast{8%,82%{opacity:1}100%{opacity:0}}
+
+/* ---------- 選択画面（報酬・店・休憩・できごと） ---------- */
+#choose{padding:calc(var(--u)*20) calc(var(--u)*5) calc(var(--u)*4);gap:calc(var(--u)*2.4)}
+#choose h2{font-family:var(--mincho);font-size:calc(var(--u)*8);color:var(--paper);font-weight:900;letter-spacing:.06em}
+.rsub{color:var(--sub);font-size:calc(var(--u)*3.6);text-align:center;line-height:1.6;font-weight:500}
+.picks{display:flex;flex-direction:column;gap:calc(var(--u)*1.6);width:100%;flex:1;min-height:0;overflow-y:auto;padding:calc(var(--u)*1) 0}
+.picks:empty{flex:0}
+.pick{flex:none;position:relative;display:flex;align-items:center;gap:calc(var(--u)*3);padding:calc(var(--u)*2.2) calc(var(--u)*2.6);border-radius:calc(var(--u)*1.2);
+  background:var(--panel);border:1px solid var(--line);text-align:left;width:100%}
+.pick:not(.static):active{transform:scale(.98);border-color:var(--kin)}
+.pick[disabled]{opacity:.4}
+.pick > div:last-of-type{flex:1;min-width:0}
+/* 札の見本（戦闘の札と同じ見た目） */
+.mini{flex:none;width:calc(var(--u)*13);height:calc(var(--u)*13);border-radius:calc(var(--u)*1.2);display:flex;align-items:center;justify-content:center;
+  background:var(--k,var(--sumi));color:var(--paper);font-family:var(--mincho);font-size:calc(var(--u)*7.6);font-weight:900;position:relative;
+  box-shadow:inset 0 0 0 calc(var(--u)*.8) var(--k,var(--sumi)),inset 0 0 0 calc(var(--u)*1) rgba(236,227,207,.6)}
+.mini .mk{position:relative}
+.mini.relic{border-radius:50%;background:var(--sumi);color:var(--kin);box-shadow:none;border:1px solid var(--kin)}
+.mini.relic.boss{color:var(--shu);border-color:var(--shu)}
+.mini .x2{position:absolute;right:calc(var(--u)*-1.5);bottom:calc(var(--u)*-1.5);font-family:var(--font);font-size:calc(var(--u)*2.8);background:var(--sumi);color:var(--ink);
+  border:1px solid var(--line);border-radius:calc(var(--u)*.6);padding:0 calc(var(--u)*1)}
+/* 結果画面 */
+#choose.norun{padding-top:calc(var(--u)*7)}
+.res{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*2.6);width:calc(var(--u)*90)}
+.res-reach{font-size:calc(var(--u)*3.8);color:var(--ink)}
+.res-reach em{font-style:normal;margin-left:calc(var(--u)*2);padding:0 calc(var(--u)*1.6);border:1px solid var(--shu);border-radius:calc(var(--u)*.6);color:var(--shu);font-size:.85em}
+.res-heat{display:flex;flex-direction:column;align-items:center;line-height:1.25}
+.res-heat .hl{font-size:calc(var(--u)*3.2);color:var(--sub);letter-spacing:.2em}
+.res-heat .hd{font-size:calc(var(--u)*15);font-weight:900;color:var(--shu);font-variant-numeric:tabular-nums;line-height:1.05}
+.res-heat .hd small{font-size:.4em;margin-left:.05em}
+.res-heat .hn{font-family:var(--mincho);font-size:calc(var(--u)*5.6);font-weight:900;color:var(--kin);margin-top:calc(var(--u)*.8)}
+.res-heat .hx{font-size:calc(var(--u)*3.4);color:var(--ink);font-weight:500;margin-top:calc(var(--u)*.8)}
+.res-heat .ht{font-size:calc(var(--u)*3);color:var(--sub);font-weight:500;margin-top:calc(var(--u)*.6)}
+.res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;width:100%;background:var(--line);border:1px solid var(--line);border-radius:calc(var(--u)*1.2);overflow:hidden}
+.res-grid .rc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u)*.6);padding:calc(var(--u)*2.2) 0;background:var(--panel)}
+.res-grid .rc b{font-size:calc(var(--u)*6);font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+.res-grid .rc span{font-size:calc(var(--u)*2.8);color:var(--sub);font-weight:500}
+.res-grid .rc.best b{color:var(--kin)}
+.res-grid .rc.best span::after{content:" 更新";color:var(--kin)}
+.res-note{font-size:calc(var(--u)*3.6);color:var(--kin)}
+.res-sec{align-self:stretch;text-align:left;font-family:var(--mincho);font-size:calc(var(--u)*4);color:var(--ink);padding-top:calc(var(--u)*1);border-top:1px solid var(--line)}
+
+/* 名前と説明は必ず2行（上＝名前、下＝説明） */
+.pick .nm{display:block;font-size:calc(var(--u)*4.4);font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick .nm small{color:var(--sub);font-size:.65em;font-weight:700}
+.pick .ds .ug{white-space:nowrap}
+.pick .ds em{font-style:normal;font-weight:900;color:var(--kin)}
+.pick .ds{display:block;margin-top:calc(var(--u)*.6);font-size:calc(var(--u)*3.2);color:var(--sub);font-weight:500;line-height:1.45}
+.pick .price{flex:none;font-size:calc(var(--u)*3.8);color:var(--kin);font-variant-numeric:tabular-nums}
+.rar1 .nm{color:#a9c6c0} .rar2 .nm{color:var(--kin)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="fx"></div>
+  <div class="hurtfx" id="hurtfx"></div>
+
+  <section id="title" class="screen on">
+    <div class="sndrow" id="sndRow"><button class="pausebtn bgmbtn" id="btnBgm">BGM あり</button><button class="pausebtn sndbtn" id="btnSnd">効果音 あり</button></div>
+    <div class="logo">百鬼めくり</div>
+    <div class="logo-sub">めくって、そろえて、百鬼を祓え。</div>
+    <button class="btn" id="btnNew">はじめる</button>
+    <button class="btn sub" id="btnCont" style="display:none">つづきから</button>
+    <div class="asc" id="ascRow" style="display:none">
+      <div class="ascsel"><button id="ascDn">◀</button><b id="ascNum"></b><button id="ascUp">▶</button></div>
+      <div class="ascdesc" id="ascDesc"></div>
+    </div>
+    <div class="title-meta" id="titleMeta"></div>
+    <div class="title-note">札をどんどんめくれ<br>同じ絵柄が2枚開いたら即発動<br>妖怪は待ってくれない</div>
+    <!-- 説明は画面の下段に（「はじめる」「つづきから」の近くに置かない） -->
+    <div class="title-links"><button class="btn sub" id="btnHow">遊び方</button><button class="btn sub" id="btnCards">札の説明</button></div>
+  </section>
+
+  <section id="battle" class="screen">
+    <div class="topbar">
+      <span><b id="tFloor">1</b>階</span>
+      <span>銭 <b id="tGold">0</b></span>
+      <span id="fPile">山 0</span>
+      <span id="fDisc">捨 0</span>
+      <button class="pausebtn" id="btnPause">一時停止</button>
+    </div>
+    <!-- 持っているお守り。1行固定（多いときは横にスクロール）。下側は盤面だけにする -->
+    <div class="rrow brel" id="bRelics"></div>
+    <!-- 場面：左が味方の百鬼の行列、右が敵。そろえた札の妖怪が行列に加わり、敵に飛びかかる -->
+    <div class="stage" id="stage">
+      <div class="moon"></div>
+      <div class="lant"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="road"></div>
+      <div class="parade" id="parade"></div>
+      <div class="barrier" id="barrier"></div>
+      <div class="ename" id="eName"></div>
+      <div class="tags etags" id="eTags"></div>
+      <div class="foe" id="foe">鬼</div>
+    </div>
+    <div class="combo"><span class="cnum" id="cNum">0<small>連</small></span><div class="cbar"><i id="cBar"></i></div></div>
+    <div class="log" id="log"></div>
+    <!-- 盤面のすぐ上に情報の帯（敵の行動・敵HP／攻撃までの輪／自分HP・防御）。盤面の4×4は崩さない -->
+    <div class="mid">
+      <div class="mside"><div class="ma"><span class="ic" id="eIntent"></span><b id="eHp"></b></div><div class="mbar hp"><i id="eHpBar"></i></div></div>
+      <div class="ring" id="ring"><span id="ringK"></span></div>
+      <div class="mside"><div class="ma"><b id="pHp"></b><span class="ptags"><span class="pt blk" id="pBlk"></span><span class="pt str" id="pStr"></span></span></div><div class="mbar php"><i id="pHpBar"></i></div></div>
+    </div>
+    <div class="board" id="board"></div>
+    <div class="overlay" id="pauseOv">
+      <h2>一時停止</h2>
+      <button class="btn" id="btnResume">つづける</button>
+      <button class="btn sub" id="btnQuitBattle">タイトルへ</button>
+      <div class="sndrow2"><button class="pausebtn bgmbtn" id="btnBgmPause">BGM あり</button><button class="pausebtn sndbtn" id="btnSndPause">効果音 あり</button></div>
+      <div class="ovnote">タイトルに戻っても、「つづきから」でこの戦闘の今の状態から再開できます</div>
+      <div class="ovrel"><div class="ovrel-t">持っているお守り</div><div class="ovrel-list" id="ovRelics"></div></div>
+    </div>
+  </section>
+
+  <!-- マップ・できごと・店・休憩・報酬で共通の上部欄（幕・HP・銭・山札・お守り） -->
+  <div class="mhead runbar" id="runbar">
+    <div class="mrow"><b id="mAct">第1幕</b><span id="mHp"></span><span>銭 <b id="mGold">0</b></span><button class="pausebtn" id="btnDeck"><span id="mDeck">山札</span></button></div>
+    <div class="mrow2"><div class="rrow" id="mRelics"></div><button class="pausebtn" id="btnRelics">一覧</button><button class="pausebtn" id="btnMapTitle">タイトルへ</button></div>
+  </div>
+  <section id="map" class="screen">
+    <div class="mscroll" id="mapScroll"><div class="mbox" id="mapBox"><svg id="mapSvg"></svg></div></div>
+  </section>
+
+  <section id="choose" class="screen">
+    <h2 id="cTitle"></h2>
+    <div class="rsub" id="cSub"></div>
+    <div class="picks" id="cItems"></div>
+    <button class="btn sub" id="cBtn"></button>
+  </section>
+
+  <div class="toast" id="toast"></div>
+</div>
+<script>
+'use strict';
+/* =========================================================
+   百鬼めくり — 待ったなしの札合わせローグライク
+   ========================================================= */
+
+/* ---------- 乱数（シード式） ---------- */
+function hashStr(str){
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function makeRng(state){
+  return {
+    s: state >>> 0,
+    next(){
+      let t = (this.s = (this.s + 0x6D2B79F5) >>> 0);
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    },
+    int(n){ return Math.floor(this.next() * n); },
+    pick(a){ return a[this.int(a.length)]; },
+    shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = this.int(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; },
+  };
+}
+function randomSeed(){
+  const C = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 6; i++) s += C[Math.floor(Math.random() * C.length)];
+  return s;
+}
+
+/* ---------- 札（技） ----------
+   山札は「組」の並び。1組＝同じ札2枚。盤には1枚ずつ配る。 */
+const SK = {
+  zan:   { n:'斬', col:'#b8322a', sh:'diamond', r:0, nv:u => 6 + 3*u,  d:u => `敵に ${6 + 3*u} ダメージ` },
+  mamo:  { n:'守', col:'#2c5aa0', sh:'square', r:0, nv:u => 5 + 3*u,  d:u => `防御 +${5 + 3*u}（敵の行動まで有効）` },
+  ren:   { n:'連', col:'#c98a1a', sh:'tri', r:0, nv:u => 3 + 2*u,  d:u => `敵に ${3 + 2*u} ダメージ、連続 +1 追加` },
+  kusuri:{ n:'薬', col:'#3c8a48', sh:'cross', r:0, nv:u => 3 + 2*u,  d:u => `HP ${3 + 2*u} 回復` },
+  zeni:  { n:'銭', col:'#8a7d2c', sh:'circle', r:0, nv:u => 5 + 3*u,  d:u => `銭 +${5 + 3*u}` },
+  sukasu:{ n:'透', col:'#23807c', sh:'hex', r:0, nv:u => 4 + 2*u,  d:u => `伏せ札 ${4 + 2*u} 枚を一瞬見せる` },
+  en:    { n:'炎', col:'#d4602a', sh:'drop', r:1, nv:u => 3 + 2*u,  d:u => `やけど +${3 + 2*u}（毎秒ダメージ、1ずつ減る）` },
+  toki:  { n:'時', col:'#6a5aa8', sh:'moon', r:1, nv:u => 1.2 + .6*u, d:u => `敵の行動を ${(1.2 + .6*u).toFixed(1)}秒 遅らせる` },
+  kyu:   { n:'吸', col:'#a8336e', sh:'heart', r:1, nv:u => 4 + 2*u,  d:u => `敵に ${4 + 2*u} ダメージ、HP ${2 + u} 回復` },
+  fuu:   { n:'封', col:'#3f86b0', sh:'star', r:1, nv:u => 2 + u,    d:u => `弱体 ${2 + u}（敵の攻撃が4割減、行動ごとに1減る）` },
+  ka:    { n:'力', col:'#7a4e2a', sh:'circle', r:1, nv:u => 1 + u,    d:u => `筋力 +${1 + u}（この戦闘の攻撃がすべて強くなる）` },
+  rai:   { n:'雷', col:'#7d4cb5', sh:'star', r:2, nv:u => 2 + u,    d:u => `敵に（${2 + u}×連続数）ダメージ` },
+  baku:  { n:'爆', col:'#2e2a27', sh:'hex', r:2, nv:u => 14 + 5*u, d:u => `敵に ${14 + 5*u} ダメージ。自分も 2 ダメージ` },
+  ame:   { n:'雨', col:'#4f9fc8', sh:'drop', r:1, nv:u => 2 + u,    d:u => `敵に ${2 + u} ダメージを4回（筋力が4回乗る）` },
+  zen:   { n:'全', col:'#c85a86', sh:'diamond', r:2, nv:u => 0,        d:u => `伏せ札を全部${u ? '1.5' : '1'}秒見せて、連続 +2` },
+  kagami:{ n:'鏡', col:'#7f858c', sh:'circle', r:2, nv:u => 0,        d:u => `どの札ともそろう。相手の札の効果を${u ? '3' : '2'}倍で発動` },
+  noroi: { n:'呪', col:'#4a2a5e', sh:'moon', r:-1, nv:u => 0,       d:u => 'なにも起きない（敵に混ぜられた邪魔札）' },
+};
+// 札の地に薄く入れる形の紋（色が似ていても形で見分けられるように）
+const MON = {
+  circle:  '<circle cx="50" cy="50" r="38"/>',
+  tri:     '<polygon points="50,8 94,88 6,88"/>',
+  square:  '<rect x="12" y="12" width="76" height="76" rx="6"/>',
+  diamond: '<polygon points="50,4 94,50 50,96 6,50"/>',
+  star:    '<polygon points="50,4 62,38 98,38 69,59 80,94 50,72 20,94 31,59 2,38 38,38"/>',
+  hex:     '<polygon points="50,4 92,27 92,73 50,96 8,73 8,27"/>',
+  cross:   '<path d="M36 6h28v30h30v28H64v30H36V64H6V36h30z"/>',
+  moon:    '<path d="M66 12A40 40 0 1 0 66 88A36 36 0 0 1 66 12z"/>',
+  heart:   '<path d="M50 92C10 63 2 40 13 23c11-16 31-14 37 5c6-19 26-21 37-5c11 17 3 40-37 69z"/>',
+  drop:    '<path d="M50 4C50 4 86 46 86 65a36 36 0 0 1-72 0C14 46 50 4 50 4z"/>',
+};
+const monSVG = k => `<svg class="mon" viewBox="0 0 100 100" aria-hidden="true">${MON[SK[k].sh]}</svg>`;
+const ALL_POOL = Object.keys(SK).filter(k => SK[k].r >= 0 && !['zan','mamo'].includes(k));
+// 解放済みの札だけが報酬・店に出る
+let POOL = ALL_POOL.slice();
+const STARTER = [['zan',4],['mamo',4],['ren',1],['sukasu',1]];
+const RAR_NAME = ['ふつう','ちょっと珍しい','レア'];
+
+/* ---------- 敵 ----------
+   it: [行動, 値, 回数]  atk=攻撃 def=防御 buff=力 curse=呪い札 freeze=凍結 shuffle=札をかき混ぜる */
+const FOES = {
+  // 第1幕・通常
+  oni:    { n:'小鬼',     e:'鬼', hp:90,  iv:3.2, col:'#ff6b5e', it:[['atk',8],['atk',8],['def',8]] },
+  chochin:{ n:'化け提灯', e:'灯', hp:76,  iv:3.0, col:'#ffb020', it:[['atk',6],['curse',1],['atk',6]] },
+  hitotsu:{ n:'一つ目',   e:'目', hp:100, iv:3.4, col:'#7c6cff', it:[['atk',10],['buff',2],['atk',7]] },
+  kappa:  { n:'河童',     e:'河', hp:88,  iv:3.0, col:'#34d399', it:[['atk',4,2],['shuffle'],['atk',9]] },
+  // 第1幕・強敵
+  yuki:   { n:'雪女',     e:'雪', hp:120, iv:3.0, col:'#7dd3fc', it:[['freeze',3],['atk',10],['atk',10],['def',10]] },
+  oogumo: { n:'大蜘蛛',   e:'蜘', hp:115, iv:3.0, col:'#a78bfa', it:[['atk',4,3],['freeze',3],['atk',10],['def',8]] },
+  // 第1幕・ボス
+  onibi:  { n:'鬼火の王', e:'王', hp:200, iv:2.9, col:'#ff3d8b', it:[['atk',10],['curse',1],['atk',4,3],['shuffle'],['def',15],['buff',2]] },
+};
+Object.assign(FOES, {
+  // 第2幕（第1幕のHP約1.4倍・攻撃約1.15倍）
+  kama:   { n:'鎌鼬',     e:'鎌', hp:115, iv:2.9, col:'#a3e635', it:[['atk',3,3],['atk',9],['buff',2]] },
+  nuri:   { n:'塗壁',     e:'壁', hp:140, iv:3.3, col:'#a8a29e', it:[['def',12],['atk',10],['def',10],['atk',11]] },
+  kitsune:{ n:'狐火',     e:'狐', hp:115, iv:3.1, col:'#fb923c', it:[['curse',1],['atk',8],['shuffle'],['atk',8]] },
+  karasu: { n:'烏天狗',   e:'烏', hp:120, iv:3.0, col:'#475569', it:[['atk',5,2],['freeze',3],['atk',10]] },
+  tengu:  { n:'大天狗',   e:'天', hp:160, iv:3.0, col:'#ef4444', it:[['atk',4,3],['buff',2],['shuffle'],['atk',12]] },
+  ushioni:{ n:'牛鬼',     e:'牛', hp:180, iv:3.3, col:'#7c3aed', it:[['atk',14],['def',12],['atk',6,2],['freeze',3]] },
+  kyubi:  { n:'九尾',     e:'尾', hp:260, iv:3.3, col:'#f59e0b', it:[['atk',5,3],['curse',1],['shuffle'],['atk',13],['def',15],['freeze',3],['buff',2]] },
+  // 第3幕（第1幕のHP約1.8倍・攻撃約1.3倍）
+  gasha:  { n:'餓者髑髏', e:'骨', hp:160, iv:3.0, col:'#e7e5e4', it:[['atk',11],['atk',4,3],['def',12]] },
+  raiju:  { n:'雷獣',     e:'獣', hp:145, iv:2.8, col:'#facc15', it:[['atk',3,4],['freeze',3],['atk',10]] },
+  hannya: { n:'般若',     e:'般', hp:155, iv:3.0, col:'#f43f5e', it:[['buff',2],['atk',10],['curse',1],['atk',10]] },
+  kage:   { n:'影法師',   e:'影', hp:140, iv:2.8, col:'#334155', it:[['shuffle'],['atk',8,2],['shuffle'],['atk',11]] },
+  nue:    { n:'鵺',       e:'鵺', hp:210, iv:2.8, col:'#8b5cf6', it:[['atk',6,3],['freeze',4],['shuffle'],['atk',15]] },
+  mukade: { n:'大百足',   e:'百', hp:230, iv:3.0, col:'#b45309', it:[['atk',3,5],['def',16],['buff',2],['atk',13]] },
+  orochi: { n:'八岐大蛇', e:'蛇', hp:360, iv:3.1, col:'#16a34a', it:[['atk',6,3],['curse',1],['atk',16],['shuffle'],['freeze',4],['def',20],['buff',2],['atk',3,5]] },
+});
+const ACTS = [
+  { easy:['oni','chochin'], normal:['oni','chochin','hitotsu','kappa'], elite:['yuki','oogumo'], boss:'onibi' },
+  { easy:['kama','kitsune'], normal:['kama','nuri','kitsune','karasu'], elite:['tengu','ushioni'], boss:'kyubi' },
+  { easy:['gasha','kage'], normal:['gasha','raiju','hannya','kage'], elite:['nue','mukade'], boss:'orochi' },
+];
+
+/* ---------- 闇（難度）：夜が深いほど妖怪が強い ---------- */
+const ASC = [
+  '',
+  '強敵のHP +20%',
+  '通常の敵のHP +15%',
+  '幕の主のHP +15%',
+  '敵の攻撃 +15%',
+  '休憩の回復が2割に',
+  '最初のHPが54',
+  '最初の山札に「呪」1組',
+  '敵の行動が5%速い',
+  '店が1割高い',
+  '幕の主の攻撃 +20%',
+];
+const asc = n => !!run && run.asc >= n;
+
+/* ---------- 解放 ----------
+   周回が終わるたびに「経験」（到達階＋幕の主を祓った数×10）がたまり、12ごとに1つ解放 */
+const UNLOCKS = [
+  ['card','ame'], ['relic','rengai'], ['card','kyu'], ['relic','yonetsu'], ['card','ka'], ['relic','nitou'],
+  ['card','baku'], ['relic','kyoran'], ['card','zen'], ['relic','onime'], ['card','rai'], ['relic','fukutsu'],
+];
+const UNLOCK_STEP = 12;
+function loadMeta(){ const m = loadSave().meta || {}; return Object.assign({ best:0, runs:0, wins:0, pts:0, maxAsc:0 }, m); }
+function unlockedCount(meta){ return Math.min(UNLOCKS.length, Math.floor(meta.pts / UNLOCK_STEP)); }
+function applyUnlocks(){
+  const n = unlockedCount(loadMeta());
+  const locked = UNLOCKS.slice(n);
+  POOL = ALL_POOL.filter(k => !locked.some(([t, id]) => t === 'card' && id === k));
+  LOCKED_RELICS = locked.filter(([t]) => t === 'relic').map(([, id]) => id);
+}
+let LOCKED_RELICS = [];
+
+/* ---------- 定数 ---------- */
+const SLOTS = 16;
+const OPEN_MS = 1100;     // 開いた札が閉じるまで
+const MAX_OPEN = 3;       // 同時に開ける枚数
+const COMBO_MS = 2600;    // そろえてから次をそろえるまでの猶予
+const FEVER_AT = 8;
+const FEVER_MS = 4000;
+const REFILL_MS = 420;
+const PLAYER_HP = 60;
+const SAVE_KEY = 'hyakki-mekuri.v1';
+const OLD_SAVE_KEY = 'dopa-mekuri.v1'; // 旧名のころの保存（読み込みのみ）
+
+/* ---------- 状態 ---------- */
+let run = null;   // 周回（保存対象）
+let B = null;     // 戦闘中の状態（保存しない）
+const ui = { asc:0 };
+const DEBUG = { speed:1 }; // テスト用の時間倍率
+const $ = s => document.querySelector(s);
+const show = id => {
+  document.querySelectorAll('.screen').forEach(e => e.classList.toggle('on', e.id === id));
+  // 周回中のマップ・選択画面では、上部欄（幕・HP・銭・山札・お守り）をいつも出す
+  const bar = run && !ui.titleInfo && (id === 'map' || id === 'choose');
+  $('#runbar').classList.toggle('on', !!bar);
+  $('#choose').classList.toggle('norun', id === 'choose' && (!run || ui.titleInfo));
+  bgmMode(id === 'battle' ? (run && run.pending && run.pending.kind === 'boss' ? 'boss' : 'battle') : 'night');
+  if (bar){
+    renderMapHead();
+    $('#btnMapTitle').style.display = id === 'map' ? '' : 'none';   // タイトルへはマップだけ
+  }
+};
+
+function newRun(){
+  const seed = randomSeed();
+  const hp = ui.asc >= 6 ? 54 : PLAYER_HP;
+  run = { v:1, seed, asc:ui.asc, hp, maxHp:hp, gold:0, floor:0, act:1, deck:[], relics:['chishio'],
+          rs:hashStr(seed + '|run'), at:-1, path:[], removes:0, lastFoe:null, pending:null, shop:null, bosses:0,
+          stats:{ taps:0, matches:0, misses:0, maxCombo:0, fevers:0, ms:0, battles:0 } };
+  STARTER.forEach(([k, n]) => { for (let i = 0; i < n; i++) run.deck.push({ k, u:0 }); });
+  if (asc(7)) run.deck.push({ k:'noroi', u:0 });
+  run.map = genMap(1);
+  enterMap();
+}
+// 周回の乱数（状態を保存）
+function rrng(){ const r = makeRng(run.rs); return { r, done(){ run.rs = r.s; } }; }
+
+/* ---------- 保存 ---------- */
+function loadSave(){ try { return JSON.parse(localStorage.getItem(SAVE_KEY) || localStorage.getItem(OLD_SAVE_KEY)) || {}; } catch(e){ return {}; } }
+function writeSave(d){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch(e){} }
+function save(){ const d = loadSave(); d.run = run; writeSave(d); }
+
+/* ---------- 戦闘 ---------- */
+function startBattle(foeId){
+  const f = FOES[foeId];
+  const kind = run.pending ? run.pending.kind : 'fight';
+  let hpMul = 1, atkMul = 1, ivMul = hasR('hakuhyo') ? 1.1 : 1;
+  if (kind === 'elite' && asc(1)) hpMul *= 1.2;
+  if (kind === 'fight' && asc(2)) hpMul *= 1.15;
+  if (kind === 'boss' && asc(3)) hpMul *= 1.15;
+  if (asc(4)) atkMul *= 1.15;
+  if (asc(8)) ivMul *= 0.95;
+  if (kind === 'boss' && asc(10)){ atkMul *= 1.2; if (run.act === 3) hpMul *= 1.15; }
+  const maxHp = Math.round(f.hp * hpMul);
+  const rng = makeRng(hashStr(run.seed + '|battle|' + run.floor));
+  const cards = [];
+  let uid = 0;
+  run.deck.forEach(p => { cards.push({ id:uid++, k:p.k, u:p.u }, { id:uid++, k:p.k, u:p.u }); });
+  rng.shuffle(cards);
+  B = {
+    foeId, f, rng, uid,
+    pile: cards, disc: [], slots: new Array(SLOTS).fill(null),
+    t: 0, last: 0, paused:false, over:false,
+    e: { hp:maxHp, max:maxHp, blk:0, str:0, burn:hasR('hidane') ? 6 : 0, weak:0, step:0, timer:0, iv:f.iv * 1000 * ivMul, atkMul },
+    fuku: hasR('fukutsu'), nMatch:0,
+    p: { blk:0, str:0 },
+    combo:0, lastMatch:-1e9, fever:false, feverEnd:0, burnAcc:0,
+    stats:{ taps:0, matches:0, misses:0, maxCombo:0, fevers:0 },
+    queue:[],
+  };
+  for (let i = 0; i < SLOTS; i++) dealTo(i);
+  if (hasR('sakiyomi')) B.slots.forEach(sl => { if (sl) sl.peekUntil = 1500; });
+  showBattle();
+  log(`${f.n} があらわれた！`);
+  snapBattle();
+}
+/* ---------- 戦闘の途中保存 ----------
+   盤面・山札・HP・防御・連続・百鬼夜行・敵の行動ゲージまで丸ごと保存し、同じ所から再開する。
+   開いていた札は伏せ直し、そろえて空いていた所は再開時に補充する。 */
+const SNAP_MS = 2000;
+function snapBattle(){
+  if (!B || B.over || !run) return;
+  run.battle = {
+    foeId:B.foeId, rs:B.rng.s, uid:B.uid, pile:B.pile, disc:B.disc,
+    slots:B.slots.map(sl => sl && sl.st !== 'gone' ? { c:sl.c, frozenUntil:sl.frozenUntil || 0 } : null),
+    t:B.t, e:B.e, p:B.p, combo:B.combo, lastMatch:B.lastMatch, fever:B.fever, feverEnd:B.feverEnd,
+    burnAcc:B.burnAcc, stats:B.stats, fuku:B.fuku, nMatch:B.nMatch,
+  };
+  B.lastSnap = B.t;
+  save();
+}
+function resumeBattle(sn){
+  const f = FOES[sn.foeId];
+  B = {
+    foeId:sn.foeId, f, rng:makeRng(sn.rs), uid:sn.uid, pile:sn.pile, disc:sn.disc,
+    slots:sn.slots.map(x => x ? { c:x.c, st:'down', at:0, frozenUntil:x.frozenUntil } : null),
+    t:sn.t, last:0, paused:false, over:false, e:sn.e, p:sn.p,
+    combo:sn.combo, lastMatch:sn.lastMatch, fever:sn.fever, feverEnd:sn.feverEnd, burnAcc:sn.burnAcc,
+    stats:sn.stats, fuku:sn.fuku, nMatch:sn.nMatch, queue:[], lastSnap:sn.t,
+  };
+  for (let i = 0; i < SLOTS; i++) if (!B.slots[i]) dealTo(i, true);
+  showBattle();
+  log('続きから再開。「つづける」で動き出す');
+  setPause(true);   // いきなり敵が動かないよう、一時停止から始める
+}
+
+// 戦闘画面を B の状態から組み立てて、時間を動かし始める
+function showBattle(){
+  const f = B.f;
+  buildBoard();
+  $('#eName').textContent = f.n;
+  $('#battle').classList.remove('fever', 'ended');
+  const fe = $('#foe');
+  fe.classList.remove('dead', 'hit', 'act');
+  $('#parade').innerHTML = '';
+  $('#stage').querySelectorAll('.yk.atk,.run,.impact,.slash,.bolt,.cut,.boom,.flame,.needle,.orb,.seal,.clock,.eyefx,.snum,.coinfx').forEach(e => e.remove());
+  fe.innerHTML = PX[B.foeId] ? pxArt(B.foeId, mute(f.col)) : f.e;
+  show('battle');
+  $('#battle').classList.toggle('fever', !!B.fever);
+  renderRelicRow($('#bRelics'));
+  for (let i = 0; i < SLOTS; i++) renderSlot(i);
+  renderAll();
+  B.last = performance.now();
+  requestAnimationFrame(loop);
+}
+
+const PULL = 0.5; // 補充で「盤上で相方のいない札の相方」を引き寄せる確率
+function draw(pull){
+  if (!B.pile.length){
+    if (!B.disc.length) return null;
+    B.pile = B.rng.shuffle(B.disc);
+    B.disc = [];
+    log('捨て札を切り直した');
+  }
+  if (pull && B.rng.next() < PULL){
+    const cnt = {};
+    B.slots.forEach(s => { if (s && s.st === 'down') cnt[s.c.k] = (cnt[s.c.k] || 0) + 1; });
+    const lonely = Object.keys(cnt).filter(k => cnt[k] % 2 === 1 && k !== 'noroi');
+    const j = B.pile.findIndex(c => lonely.includes(c.k));
+    if (j >= 0) return B.pile.splice(j, 1)[0];
+  }
+  return B.pile.pop();
+}
+// pull=true は戦闘中の補充（最初の配札は完全にランダム）
+function dealTo(i, pull){
+  const c = draw(pull);
+  B.slots[i] = c ? { c, st:'down', at:0, frozenUntil:0 } : null;
+}
+
+/* ---------- 盤の描画 ---------- */
+function buildBoard(){
+  const bd = $('#board');
+  bd.innerHTML = '';
+  for (let i = 0; i < SLOTS; i++){
+    const el = document.createElement('div');
+    el.className = 'slot';
+    el.innerHTML = '<div class="card"><div class="face back">百</div><div class="face front"></div></div>';
+    el.addEventListener('pointerdown', e => { e.preventDefault(); tap(i); });
+    bd.appendChild(el);
+  }
+  for (let i = 0; i < SLOTS; i++) renderSlot(i);
+}
+function slotEl(i){ return $('#board').children[i]; }
+function renderSlot(i){
+  const el = slotEl(i), s = B.slots[i];
+  el.classList.toggle('empty', !s);
+  if (!s){ el.classList.remove('open','peek','frozen','closing'); return; }
+  const sk = SK[s.c.k], fr = el.querySelector('.front');
+  if (fr.dataset.key !== s.c.k + s.c.u){
+    fr.dataset.key = s.c.k + s.c.u;
+    fr.style.setProperty('--k', sk.col);
+    const nv = sk.nv(s.c.u);
+    fr.innerHTML = monSVG(s.c.k) + `<span class="kj">${sk.n}</span>` + (nv ? `<span class="nv">${nv % 1 ? nv.toFixed(1) : nv}</span>` : '')
+                 + (s.c.u ? '<span class="pl">＋</span>' : '');
+  }
+  el.classList.toggle('open', s.st === 'open');
+  el.classList.toggle('peek', s.st === 'down' && (B.fever || (s.peekUntil || 0) > B.t));
+  el.classList.toggle('frozen', s.st === 'down' && s.frozenUntil > B.t);
+}
+// 色を墨の灰色に少し寄せて、派手すぎない色にする
+function mute(hex, k = .35){
+  const n = parseInt(hex.slice(1), 16), g = [0x4a, 0x44, 0x50];
+  const m = (v, i) => Math.round(v * (1 - k) + g[i] * k);
+  return `rgb(${m(n >> 16, 0)},${m((n >> 8) & 255, 1)},${m(n & 255, 2)})`;
+}
+
+/* ---------- 操作 ---------- */
+function tap(i){
+  if (!B || B.over || B.paused) return;
+  const s = B.slots[i];
+  if (!s || s.st !== 'down' || s.frozenUntil > B.t) return;
+  B.stats.taps++;
+  // 開きすぎたら一番古い札を閉じる
+  const open = openSlots();
+  if (open.length >= maxOpen()) closeSlot(open[0], true);
+  s.st = 'open';
+  s.at = B.t;
+  renderSlot(i);
+  const p = appPos(slotEl(i));
+  fx('tapring', p.x, p.y, null, null, 300);   // 押した手応え
+  sfx('flip');
+  tryMatch(i);
+}
+const openSlots = () => B.slots.map((s, i) => s && s.st === 'open' ? i : -1).filter(i => i >= 0).sort((a, b) => B.slots[a].at - B.slots[b].at);
+
+function closeSlot(i, miss){
+  const s = B.slots[i];
+  if (!s || s.st !== 'open') return;
+  s.st = 'down';
+  renderSlot(i);
+  if (miss){
+    B.stats.misses++;
+    comboBreak();
+    if (hasR('kyoran')) hurtMe(1, true);
+  }
+}
+
+function tryMatch(i){
+  const s = B.slots[i];
+  const others = openSlots().filter(j => j !== i);
+  // 同じ札が最優先、なければ鏡
+  let j = others.find(j => B.slots[j].c.k === s.c.k);
+  if (j === undefined && s.c.k === 'kagami') j = others[0];
+  if (j === undefined) j = others.find(j => B.slots[j].c.k === 'kagami');
+  if (j === undefined) return;
+  matchPair(j, i);
+}
+
+function matchPair(i, j){
+  const a = B.slots[i].c, b = B.slots[j].c;
+  B.slots[i].st = B.slots[j].st = 'gone';
+  // コンボ
+  B.combo = (B.t - B.lastMatch <= COMBO_MS || B.combo === 0) ? B.combo + 1 : 1;
+  B.lastMatch = B.t;
+  B.stats.matches++;
+  // 鏡は相手の札を倍で発動
+  let k = a.k, u = a.u, times = 1;
+  if (a.k === 'kagami' && b.k !== 'kagami'){ k = b.k; u = b.u; times = a.u ? 3 : 2; }
+  else if (b.k === 'kagami' && a.k !== 'kagami'){ times = b.u ? 3 : 2; }
+  else if (a.k === 'kagami' && b.k === 'kagami'){ k = null; B.combo += 2 + a.u; }
+  if (k === 'ren') B.combo += 1;
+  B.stats.maxCombo = Math.max(B.stats.maxCombo, B.combo);
+  if (!B.fever && B.combo >= feverAt()){ startFever(); }
+  B.nMatch++;
+  if (hasR('nitou') && B.nMatch % 5 === 0) times *= 2;
+  if (hasR('rengai')) B.p.blk += 1;
+  const m = mult();
+  B.hitLog = [];
+  if (k) for (let t = 0; t < times && !B.over; t++) applySkill(k, u, m);
+  const hits = B.hitLog;
+  B.hitLog = null;
+  [i, j].forEach(x => {
+    const el = slotEl(x);
+    el.classList.remove('open'); el.classList.add('pop');
+    B.disc.push(B.slots[x].c);
+    B.queue.push({ at:B.t + REFILL_MS, slot:x });
+  });
+  burst([i, j], k ? SK[k].col : '#e2e8f0', B.combo);
+  sfx('match', B.combo);
+  stageAct(k || 'kagami', hits);
+  setTimeout(() => [i, j].forEach(x => slotEl(x).classList.remove('pop')), 230);
+  setTimeout(() => [i, j].forEach(x => { if (B && B.slots[x] && B.slots[x].st === 'gone'){ B.slots[x] = null; renderSlot(x); } }), 220);
+  renderCombo();
+  renderStatus();
+}
+function mult(){ return (1 + Math.min(B.combo - 1, 12) * 0.1 * (hasR('kyoran') ? 2 : 1)) * (B.fever ? 1.6 : 1); }
+
+function startFever(){
+  B.fever = true;
+  B.feverEnd = B.t + FEVER_MS + (hasR('yonetsu') ? 2000 : 0);
+  B.stats.fevers++;
+  log('百鬼夜行！ 札が全部見える！');
+  $('#battle').classList.add('fever');
+  banner('百鬼夜行!!');
+  sfx('fever');
+  shake(true);
+  buzz([30, 30, 30, 30, 60]);
+  for (let i = 0; i < SLOTS; i++) if (B.slots[i]) renderSlot(i);
+}
+
+/* ---------- 効果音 ----------
+   音の素材は使わず Web Audio でその場で合成する。和の音：拍子木・太鼓・琴（都節の音階）・鈴。
+   各音は (ctx, 出力, 開始時刻, 引数) を受け取る関数。PVの音を後から同じ関数で作り直せるようにしてある */
+const SND_KEY = 'hyakki-mekuri.sound';
+const SFX = { on:true, ctx:null, out:null, master:null, rec:null };
+try { SFX.on = localStorage.getItem(SND_KEY) !== 'off'; } catch(e){}
+const NOISE = new WeakMap();
+function noiseBuf(c){
+  let b = NOISE.get(c);
+  if (!b){
+    b = c.createBuffer(1, c.sampleRate, c.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    NOISE.set(c, b);
+  }
+  return b;
+}
+function env(c, t, a, d, v){
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(v, t + a);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+  return g;
+}
+// 音程のある音。f2 があれば f から f2 へすべる
+function tone(c, out, t, { f, f2, type = 'sine', a = .004, d = .2, v = .3, lp }){
+  const o = c.createOscillator(), g = env(c, t, a, d, v);
+  o.type = type;
+  o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + a + d);
+  let n = o;
+  if (lp){ const fl = c.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = lp; o.connect(fl); n = fl; }
+  n.connect(g); g.connect(out);
+  o.start(t); o.stop(t + a + d + .05);
+}
+// 雑音を絞った音（打つ音・こすれる音）
+function hiss(c, out, t, { f = 1000, f2, q = 1, type = 'bandpass', a = .002, d = .1, v = .3 }){
+  const src = c.createBufferSource(), fl = c.createBiquadFilter(), g = env(c, t, a, d, v);
+  src.buffer = noiseBuf(c);
+  fl.type = type; fl.Q.value = q;
+  fl.frequency.setValueAtTime(f, t);
+  if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + a + d);
+  src.connect(fl); fl.connect(g); g.connect(out);
+  src.start(t, Math.random() * .5); src.stop(t + a + d + .05);
+}
+const MIYAKO = [0, 1, 5, 7, 8];   // 都節（みやこぶし）の音階
+const SND = {
+  // 札をめくる：乾いた木の音
+  flip(c, o, t){ hiss(c, o, t, { f:2600, q:4, d:.045, v:.35 }); tone(c, o, t, { f:820, f2:700, type:'triangle', d:.04, v:.07 }); },
+  // そろった：琴をはじく音。連続が伸びるほど音が上がる（1オクターブ半まで）
+  match(c, o, t, combo = 1){
+    const i = Math.min(Math.max(combo, 1) - 1, 8);
+    const f = 293.66 * Math.pow(2, (Math.floor(i / 5) * 12 + MIYAKO[i % 5]) / 12);
+    tone(c, o, t, { f, type:'sawtooth', d:.45, v:.16, lp:f * 4 });
+    tone(c, o, t, { f:f * 2, type:'triangle', d:.25, v:.08 });
+    hiss(c, o, t, { f:3200, q:2, d:.03, v:.15 });
+  },
+  // 連続が切れた
+  miss(c, o, t){ tone(c, o, t, { f:200, f2:110, type:'triangle', d:.18, v:.14 }); },
+  // 敵に当たった：太鼓。大きいダメージは低く重く
+  hit(c, o, t, dmg = 6){
+    const big = dmg >= 20;
+    tone(c, o, t, { f:big ? 130 : 170, f2:big ? 45 : 60, d:big ? .5 : .3, v:big ? .7 : .5 });
+    hiss(c, o, t, { f:500, type:'lowpass', d:.06, v:big ? .4 : .25 });
+  },
+  // こちらが攻撃を受けた
+  hurt(c, o, t){
+    hiss(c, o, t, { f:3000, f2:600, q:1.5, d:.2, v:.4 });
+    tone(c, o, t, { f:140, f2:60, type:'sawtooth', d:.22, v:.12, lp:900 });
+  },
+  // 防御・防いだ：金属の澄んだ音
+  guard(c, o, t){ tone(c, o, t, { f:880, d:.3, v:.1 }); tone(c, o, t + .01, { f:1320, d:.2, v:.05 }); },
+  heal(c, o, t){ [659, 880, 1319].forEach((f, i) => tone(c, o, t + i * .06, { f, d:.3, v:.08 })); },
+  coin(c, o, t){ tone(c, o, t, { f:1568, d:.1, v:.09, type:'square', lp:4000 }); tone(c, o, t + .07, { f:2093, d:.2, v:.09, type:'square', lp:4000 }); },
+  // 敵の攻撃以外の行動
+  foe(c, o, t){ tone(c, o, t, { f:220, f2:160, type:'square', d:.14, v:.05, lp:1200 }); },
+  // 百鬼夜行：太鼓の連打から大きく一打、鈴が鳴る
+  fever(c, o, t){
+    for (let i = 0; i < 6; i++) tone(c, o, t + i * .07, { f:160, f2:70, d:.12, v:.2 + i * .06 });
+    tone(c, o, t + .45, { f:120, f2:40, d:.7, v:.8 });
+    hiss(c, o, t + .45, { f:400, type:'lowpass', d:.1, v:.4 });
+    [1175, 1568, 2349].forEach((f, i) => tone(c, o, t + .45 + i * .05, { f, d:.9, v:.05 }));
+  },
+  // 退散：大太鼓と拍子木ふたつ
+  win(c, o, t){
+    tone(c, o, t, { f:120, f2:40, d:.8, v:.8 });
+    hiss(c, o, t, { f:400, type:'lowpass', d:.12, v:.45 });
+    [.32, .52].forEach(dt => { hiss(c, o, t + dt, { f:1900, q:9, d:.07, v:.9 }); tone(c, o, t + dt, { f:1250, d:.06, v:.12, type:'triangle' }); });
+  },
+  lose(c, o, t){ tone(c, o, t, { f:220, f2:55, type:'sawtooth', d:1.3, v:.16, lp:700 }); tone(c, o, t + .1, { f:233, f2:58, type:'sawtooth', d:1.2, v:.1, lp:600 }); },
+  // ボタン
+  ui(c, o, t){ hiss(c, o, t, { f:3200, q:5, d:.03, v:.2 }); },
+};
+function sfxInit(){
+  if (SFX.ctx){ if (SFX.ctx.state === 'suspended') SFX.ctx.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  try {
+    SFX.ctx = new AC();
+    // 効果音は控えめの音量でまとめ、BGMと一緒にコンプレッサーを通す
+    const comp = SFX.ctx.createDynamicsCompressor(), g = SFX.ctx.createGain(), se = SFX.ctx.createGain();
+    comp.threshold.value = -14; comp.ratio.value = 4;
+    g.gain.value = .85; se.gain.value = .5;
+    se.connect(comp); comp.connect(g); g.connect(SFX.ctx.destination);
+    SFX.out = se; SFX.master = comp;
+  } catch(e){ SFX.ctx = null; }
+}
+function sfx(name, arg){
+  if (SFX.rec) SFX.rec.push([performance.now(), name, arg]);   // PV用の記録
+  if (!SFX.on || !SFX.ctx) return;
+  try { SND[name](SFX.ctx, SFX.out, SFX.ctx.currentTime + .005, arg); } catch(e){}
+}
+// 最初に画面に触れたときに音を使えるようにする（ブラウザの決まり）
+document.addEventListener('pointerdown', sfxInit, true);
+// ボタンを押した音（盤面の札は別の音）
+document.addEventListener('click', e => { if (e.target.closest('button')) sfx('ui'); }, true);
+/* ---------- BGM ----------
+   効果音と同じく Web Audio で合成（オリジナル曲）。テンションの上がるロック／テクノ寄り：
+   ドラム（キック・スネア・ハット）、8分で刻むベース、和音の伴奏、琴っぽい16分のアルペジオ、歌うリード。
+   16分音符ずつ少し先（0.2秒）まで予約していく。曲は16小節で一周する */
+const BGM_KEY = 'hyakki-mekuri.bgm';
+const BGM_VOL = .9;
+const BGM = { on:true, mode:null, gain:null, step:0, next:0, fever:false, holdUntil:0, pend:null };
+try { BGM.on = localStorage.getItem(BGM_KEY) !== 'off'; } catch(e){}
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+const NOTE = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
+// 「E5:2 A5:2 r:4 …」（音名＋オクターブ：16分音符いくつ分）を [16分の位置 → [音, 長さ]] にする
+function parseMel(src){
+  const ev = {}; let pos = 0;
+  src.trim().split(/\s+/).forEach(tok => {
+    const [n, l] = tok.split(':'), len = +l;
+    if (n !== 'r'){
+      const m = n.match(/^([A-G])([#b]?)(\d)$/);
+      ev[pos] = [NOTE[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) + (+m[3] + 1) * 12, len];
+    }
+    pos += len;
+  });
+  return ev;
+}
+// 和音：[ベースの根音, 和音の3音]
+const CH = {
+  Am:[45,[57,60,64]], F:[41,[53,57,60]], G:[43,[55,59,62]], Em:[40,[52,55,59]], E:[40,[52,56,59]],
+  Dm:[50,[62,65,69]], Bb:[46,[58,62,65]], Gm:[43,[55,58,62]], A:[45,[57,61,64]], C:[48,[60,64,67]],
+  D:[50,[62,66,69]], Bm:[47,[59,62,66]], Fsm:[42,[54,57,61]], Em2:[40,[52,55,59]],
+};
+// ---- 音色 ----
+function bKick(c, o, t, v){ tone(c, o, t, { f:160, f2:42, d:.22, v }); hiss(c, o, t, { f:900, type:'lowpass', d:.02, v:v * .4 }); }
+function bSnare(c, o, t, v){ hiss(c, o, t, { f:1900, q:.8, d:.14, v }); tone(c, o, t, { f:230, f2:160, type:'triangle', d:.08, v:v * .5 }); }
+function bHat(c, o, t, v, open){ hiss(c, o, t, { f:7000, type:'highpass', d:open ? .09 : .03, v:v * .7 }); }
+function bCrash(c, o, t){ hiss(c, o, t, { f:5000, type:'highpass', a:.005, d:1, v:.12 }); }
+function bBass(c, o, t, m, d){
+  const f = mtof(m);
+  tone(c, o, t, { f, type:'sawtooth', d, v:.16, lp:900 });
+  tone(c, o, t, { f:f / 2, type:'square', d, v:.07, lp:500 });
+}
+function bArp(c, o, t, m, v){ const f = mtof(m); tone(c, o, t, { f, type:'triangle', d:.14, v, lp:f * 2 }); }   // はじいてすぐ消える柔らかい音
+function bPad(c, o, t, ms, len){
+  ms.forEach(m => [-6, 6].forEach(cents => {
+    const f = mtof(m) * Math.pow(2, cents / 1200);
+    tone(c, o, t, { f, type:'sawtooth', a:.08, d:len, v:.018, lp:1600 });
+  }));
+}
+// リード：ノコギリ波と矩形波を少しずらして重ね、長い音にはビブラート
+function bLead(c, o, t, m, len, v){
+  const f = mtof(m), g = c.createGain(), lp = c.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = 3800;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(v, t + .012);
+  g.gain.setValueAtTime(v * .8, t + Math.max(.03, len - .06));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len + .05);
+  lp.connect(g); g.connect(o);
+  const oscs = [['sawtooth', 1], ['square', 1.004]].map(([type, k]) => {
+    const x = c.createOscillator(); x.type = type; x.frequency.setValueAtTime(f * k, t); x.connect(lp); x.start(t); x.stop(t + len + .1); return x;
+  });
+  if (len > .3){
+    const lfo = c.createOscillator(), dep = c.createGain();
+    lfo.frequency.value = 5.8; dep.gain.setValueAtTime(0, t); dep.gain.linearRampToValueAtTime(f * .012, t + .25);
+    lfo.connect(dep); oscs.forEach(x => dep.connect(x.frequency));
+    lfo.start(t); lfo.stop(t + len + .1);
+  }
+}
+// ---- 曲 ----
+// kick/snare/hat：16分の位置。fill：最後の小節の後半をスネアの連打に
+const SONGS = {
+  // 夜道を行く（タイトル・マップ・店・できごと）：明るめで前へ進む感じ
+  night:{ bpm:132, prog:['D','A','Bm','G','D','A','G','A','Em2','Fsm','G','A','Bm','G','Em2','A'],
+    kick:[0, 8, 10], snare:[4, 12], hat:[2, 6, 10, 14], hatV:.07, arp:8, lead:.075,
+    mel:parseMel(`F#5:4 A5:2 B5:2 A5:4 F#5:2 E5:2  E5:6 D5:2 E5:2 A5:6  B5:4 A5:2 F#5:2 D6:4 B5:4  A5:12 r:4
+      F#5:2 A5:2 D6:4 E6:2 D6:2 B5:2 A5:2  C#6:6 B5:2 A5:4 E5:4  G5:4 B5:2 D6:2 E6:4 D6:4  E6:12 r:4
+      G5:4 B5:2 E6:2 D6:4 B5:4  A5:4 C#6:2 F#6:2 E6:4 C#6:4  D6:6 B5:2 G5:4 B5:4  C#6:8 E6:4 A5:4
+      D6:4 F#6:4 E6:2 D6:2 B5:4  D6:6 E6:2 D6:4 B5:4  G5:4 B5:4 E6:4 D6:4  C#6:4 E6:4 A6:8`) },
+  // 戦闘：速いロック。四つ打ちのキックと8分のベース
+  battle:{ bpm:168, prog:['Am','F','G','Em','Am','F','G','E','F','G','Em','Am','F','G','E','E'],
+    kick:[0, 4, 8, 12], snare:[4, 12], hat:[2, 6, 10, 14], hatV:.1, arp:16, lead:.085,
+    mel:parseMel(`E5:2 A5:2 B5:2 C6:4 B5:2 A5:2 E5:2  F5:6 E5:2 F5:2 A5:6  G5:4 D5:2 G5:2 B5:4 A5:2 G5:2  E5:10 D5:2 E5:2 G5:2
+      A5:2 C6:2 E6:4 D6:2 C6:2 B5:2 C6:2  A5:6 F5:2 A5:2 C6:4 A5:2  B5:4 C6:2 D6:4 C6:2 B5:2 G5:2  G#5:8 B5:4 E6:4
+      C6:6 A5:2 C6:2 F6:6  D6:6 B5:2 D6:2 G6:6  E6:4 D6:2 B5:2 G5:4 B5:4  A5:10 r:2 E5:2 A5:2
+      F6:4 E6:2 C6:2 A5:4 C6:4  D6:4 C6:2 B5:2 G5:4 D6:4  E6:4 D6:2 C6:2 B5:4 G#5:4  B5:16`) },
+  // 幕の主：さらに速く、和声的短音階で緊張感
+  boss:{ bpm:176, prog:['Dm','Bb','Gm','A','Dm','Bb','C','A','Bb','C','Dm','Dm','Gm','A','Bb','A'],
+    kick:[0, 3, 4, 8, 11, 12], snare:[4, 12], hat:[2, 6, 10, 14], hatV:.1, arp:16, lead:.085,
+    mel:parseMel(`D6:2 r:2 D6:2 A5:2 F5:2 A5:2 D6:2 E6:2  F6:6 E6:2 D6:4 Bb5:4  G5:2 Bb5:2 D6:4 C6:2 Bb5:2 A5:2 G5:2  A5:8 C#6:4 E6:4
+      D6:2 F6:2 A6:4 G6:2 F6:2 E6:2 D6:2  F6:6 D6:2 Bb5:4 D6:4  E6:4 C6:2 G5:2 C6:4 E6:4  C#6:8 E6:4 A6:4
+      Bb5:4 D6:4 F6:4 Bb6:4  C6:4 E6:4 G6:4 C7:4  A6:6 G6:2 F6:4 E6:4  D6:12 r:4
+      G6:4 F6:2 D6:2 Bb5:4 D6:4  C#6:4 E6:2 A6:2 G6:4 E6:4  F6:4 E6:2 D6:2 C#6:4 D6:4  E6:16`) },
+};
+function bgmStep(c, o, t, i, s16, song, fever){
+  const bars = song.prog.length, bar = Math.floor(i / 16) % bars, p = i % 16, last = bar === bars - 1;
+  const [root, tri] = CH[song.prog[bar]];
+  // ドラム
+  if (p === 0 && bar % 8 === 0) bCrash(c, o, t);
+  if (song.kick.includes(p) || (fever && p % 4 === 2 && song !== SONGS.night)) bKick(c, o, t, .75);
+  if (last && p >= 8) bSnare(c, o, t, .15 + (p - 8) * .03);   // 一周の終わりはスネアの連打
+  else if (song.snare.includes(p)) bSnare(c, o, t, .32);
+  if (song.hat.includes(p)) bHat(c, o, t, song.hatV * 1.4, true);
+  else if (p % 2 === 0 || fever) bHat(c, o, t, song.hatV * .7);
+  // ベース：8分で根音とオクターブを刻む
+  if (p % 2 === 0) bBass(c, o, t, root + ([0, 0, 12, 0, 0, 12, 0, 12][p >> 1]), s16 * 1.7);
+  // 伴奏の和音（小節の頭）
+  if (p === 0) bPad(c, o, t, tri, s16 * 16);
+  // アルペジオ：夜道は8分、戦闘は16分。百鬼夜行中は1オクターブ上
+  if (song.arp === 16 || p % 2 === 0){
+    const k = song.arp === 16 ? p % 4 : (p >> 1) % 4;
+    const m = [tri[0], tri[1], tri[2], tri[1]][k];
+    bArp(c, o, t, m, fever ? .06 : .05);
+  }
+  // リード
+  const ev = song.mel[i % (bars * 16)];
+  if (ev) bLead(c, o, t, ev[0], ev[1] * s16, song.lead);
+}
+// 決着のジングル（勝ち＝短いファンファーレ、負け＝ゆっくり下がる2小節）。鳴り終わるまで次の曲は待たせる
+const JINGLES = {
+  win:{ bpm:150, start:.25, len:32, mel:parseMel('D6:2 F#6:2 A6:4 G6:2 B6:2 A6:2 C#7:2 D7:12 r:4'),
+    ch:[[0, 'D', 8], [8, 'G', 4], [12, 'A', 4], [16, 'D', 14]], kick:[0, 4, 8, 12, 16], roll:[12, 16], crash:[0, 16] },
+  lose:{ bpm:90, start:.1, len:32, mel:parseMel('E5:4 D5:4 C5:4 B4:4 A4:14 r:2'),
+    ch:[[0, 'Am', 8], [8, 'Dm', 8], [16, 'Am', 16]], kick:[0, 16], roll:null, crash:[] },
+};
+function bgmFadeOut(){
+  const c = SFX.ctx, g = BGM.gain;
+  if (!c || !g) return;
+  g.gain.cancelScheduledValues(c.currentTime);
+  g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), c.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + .35);   // 予約済みの音は消えながら鳴り終わる
+  setTimeout(() => { try { g.disconnect(); } catch(e){} }, 800);
+  BGM.gain = null;
+}
+function bgmNewGain(fadeIn){
+  const c = SFX.ctx, g = c.createGain();
+  g.gain.setValueAtTime(0.0001, c.currentTime);
+  g.gain.exponentialRampToValueAtTime(BGM.on ? BGM_VOL : 0.0001, c.currentTime + fadeIn);
+  g.connect(SFX.master);
+  return g;
+}
+function bgmMode(m){
+  const c = SFX.ctx;
+  // ジングルが鳴っている間は、次の戦闘以外は鳴り終わるまで待つ
+  if (c && c.currentTime < BGM.holdUntil && m !== 'battle' && m !== 'boss'){ BGM.pend = m; return; }
+  BGM.holdUntil = 0; BGM.pend = null;
+  if (BGM.mode === m) return;
+  BGM.mode = m;
+  BGM.step = 0;
+  if (!c) return;
+  bgmFadeOut();
+  if (m){ BGM.gain = bgmNewGain(.3); BGM.next = c.currentTime + .08; }
+}
+function bgmJingle(name){
+  const c = SFX.ctx;
+  BGM.mode = null; BGM.pend = null;
+  if (!c) return;
+  bgmFadeOut();
+  if (!BGM.on || c.state !== 'running') return;
+  const J = JINGLES[name], s16 = 60 / J.bpm / 4, t0 = c.currentTime + J.start, g = bgmNewGain(.01);
+  BGM.gain = g;
+  J.crash.forEach(p => bCrash(c, g, t0 + p * s16));
+  J.kick.forEach(p => bKick(c, g, t0 + p * s16, .7));
+  if (J.roll) for (let p = J.roll[0]; p < J.roll[1]; p++) bSnare(c, g, t0 + p * s16, .15 + (p - J.roll[0]) * .05);
+  J.ch.forEach(([p, ch, len]) => {
+    const [root, tri] = CH[ch];
+    bPad(c, g, t0 + p * s16, tri, len * s16);
+    bBass(c, g, t0 + p * s16, root, len * s16 * .9);
+  });
+  Object.entries(J.mel).forEach(([p, [m, len]]) => {
+    bLead(c, g, t0 + p * s16, m, len * s16, .09);
+    bLead(c, g, t0 + p * s16, m - 12, len * s16, .04);   // 1オクターブ下を重ねて厚く
+  });
+  BGM.holdUntil = t0 + J.len * s16 + .2;
+}
+function bgmTick(){
+  const c = SFX.ctx;
+  if (!c || !BGM.on || c.state !== 'running') return;
+  if (BGM.pend && c.currentTime >= BGM.holdUntil) bgmMode(BGM.pend);   // ジングルが鳴り終わったら次の曲へ
+  if (!BGM.mode) return;
+  if (!BGM.gain) BGM.gain = bgmNewGain(.3);
+  if (B && B.paused && BGM.mode !== 'night') { BGM.next = 0; return; }   // 一時停止中は止める
+  const song = SONGS[BGM.mode], s16 = 60 / song.bpm / 4;
+  if (BGM.next < c.currentTime) BGM.next = c.currentTime + .05;
+  const fever = !!(B && B.fever && !B.over);
+  if (fever && !BGM.fever) bCrash(c, BGM.gain, BGM.next);   // 百鬼夜行の始まりにシンバル
+  BGM.fever = fever;
+  while (BGM.next < c.currentTime + .2){
+    try { bgmStep(c, BGM.gain, BGM.next, BGM.step, s16, song, fever); } catch(e){}
+    BGM.next += s16;
+    BGM.step++;
+  }
+}
+setInterval(bgmTick, 40);
+function setBgm(on){
+  BGM.on = on;
+  try { localStorage.setItem(BGM_KEY, on ? 'on' : 'off'); } catch(e){}
+  if (BGM.gain && SFX.ctx){ BGM.gain.gain.cancelScheduledValues(SFX.ctx.currentTime); BGM.gain.gain.setValueAtTime(on ? BGM_VOL : 0.0001, SFX.ctx.currentTime + .05); }
+  renderSoundBtns();
+}
+function setSound(on){
+  SFX.on = on;
+  try { localStorage.setItem(SND_KEY, on ? 'on' : 'off'); } catch(e){}
+  renderSoundBtns();
+}
+function renderSoundBtns(){
+  document.querySelectorAll('.sndbtn').forEach(b => b.textContent = SFX.on ? '効果音 あり' : '効果音 なし');
+  document.querySelectorAll('.bgmbtn').forEach(b => b.textContent = BGM.on ? 'BGM あり' : 'BGM なし');
+}
+
+/* ---------- 演出 ---------- */
+function pulse(el, cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+function buzz(p){ try { if (navigator.vibrate) navigator.vibrate(p); } catch(e){} }
+function shake(big){ pulse($('#app'), big ? 'shake-l' : 'shake-s'); }
+function appPos(el){
+  const a = $('#app').getBoundingClientRect(), r = el.getBoundingClientRect();
+  return { x: r.left - a.left + r.width / 2, y: r.top - a.top + r.height / 2, w: a.width / 100 };
+}
+function fx(cls, x, y, style, html, life){
+  const d = document.createElement('div');
+  d.className = cls;
+  d.style.left = x + 'px'; d.style.top = y + 'px';
+  if (style) for (const k in style) d.style.setProperty(k, style[k]);
+  if (html) d.innerHTML = html;
+  $('#fx').appendChild(d);
+  setTimeout(() => d.remove(), life || 900);
+}
+function floatNum(el, text, cls, big){
+  const p = appPos(el);
+  fx('num ' + cls + (big ? ' big' : ''), p.x + (Math.random() - .5) * p.w * 14, p.y + (Math.random() - .5) * p.w * 6, null, text);
+}
+// そろった瞬間：札の色の火花と光の輪。連続が伸びるほど派手に
+function burst(slots, col, combo){
+  const n = 6 + Math.min(combo, 12);
+  slots.forEach(i => {
+    const p = appPos(slotEl(i));
+    fx('rg', p.x, p.y, { '--c': col }, null, 500);
+    for (let k = 0; k < n; k++){
+      const a = (k / n) * Math.PI * 2 + Math.random() * .4, d = p.w * (8 + Math.random() * 8 + Math.min(combo, 12));
+      fx('sp', p.x, p.y, { background: k % 3 ? col : '#ece3cf', '--dx': Math.cos(a) * d + 'px', '--dy': Math.sin(a) * d + 'px' }, null, 650);
+    }
+  });
+  pulse($('#cNum'), 'pop');
+  if (combo >= 10) shake(true); else if (combo >= 4) shake(false);
+  buzz(combo >= 10 ? [15, 25, 15] : 10);
+}
+function banner(text, cls){ fx('banner' + (cls ? ' ' + cls : ''), 0, 0, null, text, 1150); }
+
+// 仮のドット絵（画像ファイルは使わず、文字で点を並べて SVG にする）
+// 文字：. 透明 k 輪郭 a 本体 b 本体の影 c 本体の明るい所 w 和紙色 r 朱 y 金 g 灰 s 肌
+const PX = {
+// ---- 敵（16×16） ----
+oni:[
+"...w........w...",
+"...ww......ww...",
+"....wkkkkkkw....",
+"...kaaaaaaaak...",
+"..kaaaaaaaaaak..",
+"..kawwkaakwwak..",
+"..kawkkaakkwak..",
+"..kaaaaaaaaaak..",
+"..kaakkkkkkaak..",
+"..kaakwkkwkaak..",
+"...kaakkkkaak...",
+"..kbkaaaaaakbk..",
+".kbbkaaaaaakbbk.",
+".kbk.kaaaak.kbk.",
+"..k..kbkkbk..k..",
+".....kk..kk.....",
+],
+chochin:[
+"......kkkk......",
+".....kyyyyk.....",
+"....kkkkkkkk....",
+"...kaaaaaaaak...",
+"..kcaaaaaaaaak..",
+"..kbbbbbbbbbbk..",
+"..kcakwwwkaaak..",
+"..kaakwkwkaaak..",
+"..kbbkwwwkbbbk..",
+"..kaaakkkaaaak..",
+"..kaakrrrkaaak..",
+"..kbbbkrrkbbbk..",
+"...kaaakrkaak...",
+"....kkkkrkkk....",
+".....kyykrk.....",
+"......kkkk......",
+],
+hitotsu:[
+".....kkkkkk.....",
+"....ksssssskk...",
+"...kssssssssk...",
+"..ksskkkkkkssk..",
+"..kskwwwwwwksk..",
+"..kskwwkkwwksk..",
+"..kskwwkkwwksk..",
+"..ksskwwwwkssk..",
+"...ksskkkkssk...",
+"....kssrrssk....",
+"...kkkssssskk...",
+"..kaaakkkkaaak..",
+".kaaaaaaaaaaaak.",
+".kabaaayyaaabak.",
+".kbbkaaaaaakbbk.",
+"..kk.kkkkkk.kk..",
+],
+kappa:[
+"....kkkkkkkk....",
+"...kggggggggk...",
+"..kakggggggkak..",
+"..kaakkkkkkaak..",
+"..kawwkaakwwak..",
+"..kawkkaakkwak..",
+"..kaaayyyyaaak..",
+"...kaakyykaak...",
+"....kkaaaakk....",
+"...kbbbbbbbbk...",
+"..kabbcbbcbbak..",
+"..kakbbbbbbkak..",
+"..kk.kbbbbk.kk..",
+".....kaaaak.....",
+".....kak.kak....",
+"....kkk..kkk....",
+],
+yuki:[
+"....kkkkkkkk....",
+"...kkkkkkkkkk...",
+"..kkkwwwwwwkkk..",
+"..kkwwkwwkwwkk..",
+"..kkwwwwwwwwkk..",
+"..kkwwwwrwwwkk..",
+"..kkkwwwwwwkkk..",
+"..kkkkcccckkkk..",
+"..kkkcccccckkk..",
+"..kkccaaaaccck..",
+"..kkcccaacccck..",
+"...kcccaacccck..",
+"...kcccaaccck...",
+"...kccccacccck..",
+"..kccccccccccck.",
+"..kkkkkkkkkkkkk.",
+],
+oogumo:[
+"................",
+"..k..........k..",
+"...k..kkkk..k...",
+"k...kkaaaakk...k",
+".k.kaaaaaaaak.k.",
+"..kaarakkaraak..",
+"kkkaaaakkaaaakkk",
+"...kaaaaaaaak...",
+"..kkbbbbbbbbkk..",
+".k.kbbcbbcbbk.k.",
+"k..kbbbbbbbbk..k",
+"..k.kbbbbbbk.k..",
+".k...kkbbkk...k.",
+"k.....k..k.....k",
+"................",
+"................",
+],
+onibi:[
+".....y..y..y....",
+".....yy.yy.yy...",
+".....kyyyyyyk...",
+"......kkkkkk....",
+"....kk.kaak.kk..",
+"...kaakaacakaak.",
+"..kaacaaaacaaak.",
+"..kaaccccccaak..",
+".kaacwwkkwwcaak.",
+".kacwkkccwkkcak.",
+".kaccccccccccak.",
+".kacckrrrrkccak.",
+"..kaacckkccaak..",
+"...kaaccccaak...",
+"....kkaaaakk....",
+"......kkkk......",
+],
+kama:[
+"..k.........k...",
+"..kk.......kak..",
+"..kak.....kaak..",
+"...kakkkkkaak...",
+"...kaaaaaaaak...",
+"..kawkaaaakwak..",
+"..kakkaaaakkak..",
+"...kaaakkaaak...",
+"....kaawwaak....",
+".wwwkkaaaakk....",
+"wwkkkaaaaaaak...",
+"..kk.kaaaaaaakk.",
+".....kaabaaak.kk",
+"....kaak.kaak..k",
+"....kk....kk....",
+"................",
+],
+nuri:[
+"................",
+".kkkkkkkkkkkkkk.",
+".kaaaaaaaaaaaak.",
+".kaccaaaaacaaak.",
+".kaaaaaaaaaaaak.",
+".kaakwwkkwwkaak.",
+".kaakwkkkkwkaak.",
+".kaaaaaaaaaaaak.",
+".kaacaakkaaaaak.",
+".kaaaakrrkaacak.",
+".kaaaaakkaaaaak.",
+".kacaaaaaaaaaak.",
+".kaaaaaacaaaaak.",
+".kkkkkkkkkkkkkk.",
+"...kak....kak...",
+"...kkk....kkk...",
+],
+kitsune:[
+"..kk........kk..",
+"..kak......kak..",
+"..kawk....kwak..",
+"..kaakkkkkkaak..",
+"..kaaaaaaaaaak..",
+".kaaaaaaaaaaaak.",
+".kaawrkaakrwaak.",
+".kaakkaaaakkaak.",
+"..kaaawwwwaaak..",
+"...kaawkkwaak...",
+"....kawwwwak....",
+".....kkaakk.....",
+"..y...kaak...y..",
+".yry..kaak..yry.",
+".yrry.kkkk.yrry.",
+"..yy........yy..",
+],
+karasu:[
+"....kkkkkkk.....",
+"...kaaaaaaak....",
+"..kaawkaaaaak...",
+"..karkkaaaaak...",
+".kyyyyyaaaaak...",
+"kyyyyyyyaaak....",
+".kkkkyyaaaak....",
+"..kbbkkaaaakkkk.",
+".kbbbbkaaakbbbbk",
+"kbbkbbbkakbbbkbk",
+"kbk.kbbbkbbbk.kk",
+"kk...kbbbbbk....",
+"......kbbbk.....",
+"......kyky......",
+".....kyk.kyk....",
+"................",
+],
+tengu:[
+"....kkkkkkkk....",
+"...kkkkkkkkkk...",
+"..kkaaaaaaaakk..",
+"..kawwaaaawwak..",
+"..kaakkaakkaak..",
+"..kaaaaccaaaak..",
+"..kaaaacccaaak..",
+"..kaaaakccccck..",
+"...kaaaakkkkkk..",
+"...kkwwwwwwk....",
+"..kbbkwwwwkbbk..",
+".kbbbbkwwkbbbbk.",
+".kbbkbbkkbbkbbk.",
+".kk.kbbbbbbk.kk.",
+".....kyk.kyk....",
+".....kkk.kkk....",
+],
+ushioni:[
+"w..............w",
+"ww............ww",
+".ww..kkkkkk..ww.",
+"..wwkaaaaaakww..",
+"...kaaaaaaaak...",
+"...kawrkkrwak...",
+"...kaakaakaak...",
+"...kaawwwwaak...",
+"....kawkkwak....",
+"..kkkkaaaakkkk..",
+".kbbbbbbbbbbbbk.",
+"kbbcbbbbbbbbcbbk",
+"kbbbbbbbbbbbbbbk",
+".kkbkkbkkbkkbkk.",
+".k.k.k.kk.k.k.k.",
+"k..k.k....k.k..k",
+],
+kyubi:[
+"y.ky..........yk",
+"yykyy..kk..yyky.",
+".ykay.kak.yaky..",
+"..kaykawak.ak...",
+"...kaaaaaaaak...",
+"..kaaaaaaaaaak..",
+"..kawrkaakrwak..",
+"..kaakkaakkaak..",
+"...kaaawwaaak...",
+"...kaawkkwaak...",
+"....kawwwwak....",
+"..kk.kkaakk.kk..",
+".kaak.kaak.kaak.",
+"kaawak.kk.kawaak",
+"kawwak....kawwak",
+".kkkk......kkkk.",
+],
+gasha:[
+"....kkkkkkkk....",
+"...kwwwwwwwwk...",
+"..kwwwwwwwwwwk..",
+"..kwkkkwwkkkwk..",
+"..kwkrkwwkrkwk..",
+"..kwkkkwwkkkwk..",
+"..kwwwwkkwwwwk..",
+"...kwwwwwwwwk...",
+"...kwkwkwkwk....",
+"....kwkwkwkk....",
+"....kkkkkkk.....",
+"..kwk.kwk.kwk...",
+".kwwwkwwwkwwwk..",
+"..kwk.kwk.kwk...",
+"...k.kwwwk.k....",
+"......kkk.......",
+],
+raiju:[
+"..y..........y..",
+"..yy...kk...yy..",
+"...ykkkaakkky...",
+"..kaaaaaaaaaak..",
+".kaaccaaaaccaak.",
+".kawykaaaakywak.",
+".kaakkaaaakkaak.",
+"..kaaaawwaaaak..",
+"...kaawkkwaak...",
+"....kkwwwwkk....",
+"..kkaaaaaaaakk..",
+".kaaabbaabbaaak.",
+"kaakaaaaaaaakaak",
+"kak.kaak.kaak.yk",
+"kk..kkk..kkk.yy.",
+"..............y.",
+],
+hannya:[
+".ww..........ww.",
+".www........www.",
+"..wwkkkkkkkkww..",
+"...kwwwwwwwwk...",
+"..kwwwwwwwwwwk..",
+"..kwkkwwwwkkwk..",
+"..kwyrkwwkryyk..",
+"..kwkkwwwwkkwk..",
+"..kwwwwkkwwwwk..",
+"..kwwwwkkwwwwk..",
+"..kkwkkkkkkwkk..",
+"..krkwkwkwkwrk..",
+"..krrkkkkkkrrk..",
+"...krrrrrrrrk...",
+"....kkrrrrkk....",
+"......kkkk......",
+],
+kage:[
+"................",
+"......kkkk......",
+".....kaaaak.....",
+"....kaaaaaak....",
+"....kawaawak....",
+"....kawaawak....",
+"....kaaaaaak....",
+".....kaaaak.....",
+"...kkaaaaaakk...",
+"..kaaaaaaaaaak..",
+".kaakaaaaaakaak.",
+".kk.kaaaaaak.kk.",
+"....kaaaaaak....",
+"...kaak..kaak...",
+"..kaak....kaak..",
+"..kkk......kkk..",
+],
+nue:[
+"...kk......kk...",
+"..kaak....kaak..",
+"..kaaakkkkaaak..",
+"...kaaaaaaaak...",
+"..kaawykaykwak..",
+"..kaakkaakkaak..",
+"..kaaaawwaaaak..",
+"...kaawkkwaak...",
+"..kkbkwwwwkbkk..",
+".kbbbbkkkkbbbbk.",
+"kbcbbcbbbbcbbcbk",
+"kbbbbbbbbbbbbbbk",
+".kbbkbbk.kbbkbbk",
+"..kkk.kk..kk..kk",
+"..........kaak..",
+"...........kkk..",
+],
+mukade:[
+"...k.......k....",
+"....k.kkk.k.....",
+"....kkaaakk.....",
+"...kawkakwak....",
+"...kaaaaaaak....",
+"..k.kbbbbbk.k...",
+".k.kaaaaaaak.k..",
+"...k.kbbbbbk.k..",
+"..k.kaaaaaaak.k.",
+".k.k.kbbbbbk.k..",
+"...k.kaaaaaak.k.",
+"..k.k.kbbbbbk.k.",
+".....k.kaaaak...",
+"......k.kbbk....",
+"........kak.....",
+".........k......",
+],
+orochi:[
+"..kk....kk....kk",
+".kaak..kaak..kaa",
+".krak..krak..kra",
+"..kak...kak...ka",
+"..kak...kak..kak",
+"..kaak..kak.kaak",
+"...kak..kak.kak.",
+"...kaak.kak.kak.",
+"....kaakaakaak..",
+"....kaaaaaaaak..",
+"...kaaacaacaaak.",
+"..kaacaaaaacaak.",
+"..kaaaaaaaaaaak.",
+".kaaaacaaacaaaak",
+"kaaaaaaaaaaaaaak",
+"kkkkkkkkkkkkkkkk",
+],
+// ---- 味方の行列（12×12） ----
+y_obake:[
+"....kkkk....",
+"...kaaaak...",
+"..kaaaaaak..",
+".kaawaawaak.",
+".kaakaakaak.",
+".kaaaaaaaak.",
+".kaaarraaak.",
+".kaaaaaaaak.",
+".kcaaaaaaak.",
+".kaacaaacak.",
+"..kakkakak..",
+"...k..k..k..",
+],
+y_oni:[
+"..w......w..",
+"..ww....ww..",
+"...kkkkkk...",
+"..kaaaaaak..",
+".kawkaakwak.",
+".kakkaakkak.",
+".kaaaaaaaak.",
+".kakwkkwkak.",
+"..kaakkaak..",
+".kbkaaaakbk.",
+"..k.kaak.k..",
+"....kk.kk...",
+],
+y_kasa:[
+".....kk.....",
+"...kkaakk...",
+"..kaaaaaak..",
+".kaacaacaak.",
+"kaawkaakwaak",
+"kaakkaakkaak",
+"kkaaarraaakk",
+"..kkkkkkkk..",
+".....kk.....",
+".....kk.....",
+".....kk.....",
+"....kkkk....",
+],
+y_chochin:[
+"....kkkk....",
+"...kyyyyk...",
+"..kkkkkkkk..",
+"..kaawwaak..",
+"..kbkwkwbk..",
+"..kaakkaak..",
+"..kbbkkbbk..",
+"..kaakrkak..",
+"..kbbkrkbk..",
+"..kkkkrkkk..",
+"...kyyyyk...",
+"....kkkk....",
+],
+y_neko:[
+".kk......kk.",
+".kak....kak.",
+".kaakkkkaak.",
+".kaaaaaaaak.",
+"kaykaaaakyak",
+"kakkaaaakkak",
+"kaaaawwaaaak",
+".kaawkkwaak.",
+"..kkaaaakk..",
+".kaaaaaaaak.",
+".kak.kk.kak.",
+"..k......k..",
+],
+y_kappa:[
+"...kkkkkk...",
+"..kggggggk..",
+".kakkkkkkak.",
+".kawkaakwak.",
+".kakkaakkak.",
+".kaayyyyaak.",
+"..kaakkaak..",
+"..kbbbbbbk..",
+".kabbcbbbak.",
+".kkbbbbbbkk.",
+"...kak.kak..",
+"...kk..kk...",
+],
+};
+// 札ごとの行列の妖怪（似た役割の札は同じ姿で色違い）
+const YK_PX = { zan:'y_oni', ka:'y_oni', baku:'y_oni', mamo:'y_kasa', ame:'y_kasa', ren:'y_neko', kyu:'y_neko', rai:'y_neko',
+  kusuri:'y_obake', sukasu:'y_obake', toki:'y_obake', kagami:'y_obake', noroi:'y_obake', zeni:'y_chochin', en:'y_chochin', fuu:'y_kappa', zen:'y_kappa' };
+// ドット絵の文字列を SVG にする。a/b/c は本体の色とその暗い・明るい色
+function pxMix(hex, t, to){
+  const n = parseInt(hex.slice(1), 16), c = [n >> 16, n >> 8 & 255, n & 255];
+  return '#' + c.map(v => Math.round(v + (to - v) * t).toString(16).padStart(2, '0')).join('');
+}
+const PX_PAL = { k:'#1b1820', w:'#ece3cf', r:'#c4412b', y:'#c9a14a', g:'#8a8494', s:'#e0c9a6' };
+function pxSVG(rows, col){
+  const pal = Object.assign({}, PX_PAL, { a:col, b:pxMix(col, .35, 0), c:pxMix(col, .35, 255) });
+  let out = '';
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length;){
+      const ch = row[x];
+      let e = x + 1; while (e < row.length && row[e] === ch) e++;
+      if (ch !== '.') out += `<rect x="${x}" y="${y}" width="${e - x}" height="1" fill="${pal[ch]}"/>`;
+      x = e;
+    }
+  });
+  return `<svg viewBox="0 0 ${rows[0].length} ${rows.length}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${out}</svg>`;
+}
+const PX_CACHE = {};
+function pxArt(key, col){ const id = key + col; return PX_CACHE[id] || (PX_CACHE[id] = pxSVG(PX[key], col)); }
+
+/* ---------- 場面（百鬼の行列） ---------- */
+const PARADE_MAX = 7;
+const STAGE_FX = { mamo:'barrier', kusuri:'heal', zeni:'coin' };
+function ykEl(k){
+  const d = document.createElement('div');
+  d.className = 'yk';
+  d.innerHTML = pxArt(YK_PX[k] || 'y_obake', SK[k].col);
+  return d;
+}
+function stageXY(el){
+  const a = $('#stage').getBoundingClientRect(), r = el.getBoundingClientRect();
+  return { x: r.left - a.left, y: r.top - a.top, w: r.width, h: r.height };
+}
+function stageFx(cls, x, y, style, life){
+  const d = document.createElement('div');
+  d.className = cls;
+  if (x !== null){ d.style.left = x + 'px'; d.style.top = y + 'px'; }
+  if (style) for (const k in style) d.style.setProperty(k, style[k]);
+  $('#stage').appendChild(d);
+  setTimeout(() => d.remove(), life || 500);
+  return d;
+}
+// そろえた札の妖怪が行列に加わり、技に応じて攻撃する
+// 攻撃の見せ方（行列から敵へ突っ込んで、当たった所で技ごとの演出）
+const HIT_FX = { zan:'cut', ren:'jab', en:'fire', rai:'bolt', baku:'boom', ame:'rain', kyu:'drain',
+                 fuu:'seal', toki:'clock', sukasu:'eye', zen:'eye', kagami:'mirror', noroi:'puff' };
+function stageAct(k, hits){
+  const pr = $('#parade');
+  const y = ykEl(k);
+  y.classList.add('new');
+  pr.appendChild(y);
+  while (pr.children.length > PARADE_MAX) pr.firstChild.remove();
+  // 行列でかける技
+  if (k === 'mamo'){ pulse($('#barrier'), 'ping'); sfx('guard'); return; }
+  if (k === 'kusuri'){
+    pulse(pr, 'glow'); setTimeout(() => pr.classList.remove('glow'), 500);
+    const p = stageXY(pr);
+    for (let i = 0; i < 6; i++) stageFx('orb', p.x + p.w * (.4 + Math.random() * .6), p.y + p.h * .8, null, 600)
+      .animate([{ transform:'translateY(0)', opacity:1 }, { transform:`translateY(${-p.h}px)`, opacity:0 }], { duration:600, easing:'ease-out' });
+    return;
+  }
+  if (k === 'zeni'){
+    sfx('coin');
+    const p = stageXY(y), w = $('#stage').clientWidth / 100;
+    for (let i = 0; i < 5; i++) stageFx('coinfx', p.x + p.w / 2, p.y + p.h / 2, { '--dx': ((i - 2) * w * 3) + 'px' }, 620);
+    return;
+  }
+  if (k === 'ka'){ pulse(pr, 'power'); return; }
+  const fx = HIT_FX[k] || 'cut';
+  if (fx === 'bolt'){
+    stageFx('bolt', null, null, null, 320);
+    setTimeout(() => impactAt(fx, k, hits), 90);
+    return;
+  }
+  rush(y, k, () => impactAt(fx, k, hits));
+}
+// 妖怪が大きくなって跳び上がり、敵に突っ込む
+function rush(fromEl, k, done){
+  const st = $('#stage'), from = stageXY(fromEl), to = stageXY($('#foe'));
+  const f = ykEl(k);
+  f.classList.add('atk');
+  f.style.left = from.x + 'px'; f.style.top = from.y + 'px';
+  st.appendChild(f);
+  const dx = to.x + to.w * .15 - from.x, dy = to.y + to.h * .25 - from.y, up = -st.clientHeight * .32;
+  const an = f.animate([
+    { transform:'translate(0,0) scale(1)' },
+    { transform:`translate(${dx * .25}px,${up}px) scale(1.8) rotate(-18deg)`, offset:.42 },
+    { transform:`translate(${dx}px,${dy}px) scale(1.5) rotate(22deg)` },
+  ], { duration:330, easing:'cubic-bezier(.45,0,.85,.55)' });
+  an.onfinish = () => { f.remove(); done(); };
+}
+// 当たった所：敵がのけぞり、ダメージ数字、技ごとの演出
+function impactAt(fx, k, hits){
+  const to = stageXY($('#foe')), cx = to.x + to.w / 2, cy = to.y + to.h / 2;
+  const col = SK[k].col, w = $('#stage').clientWidth / 100;
+  if (!$('#foe').classList.contains('dead')) pulse($('#foe'), 'hit');
+  if (hits && hits.length) sfx('hit', hits.reduce((x, y) => x + y, 0));
+  (hits || []).forEach((d, i) => setTimeout(() => {
+    const n = stageFx('snum' + (d >= 20 ? ' big' : ''), cx + (Math.random() - .5) * w * 10, cy - w * 4 - i * w * 2, null, 720);
+    n.textContent = d ? d : 'ガード';
+  }, i * 70));
+  switch (fx){
+    case 'cut':
+      [32, -32].forEach((r, i) => setTimeout(() => { const c = stageFx('cut', cx, cy, { '--c':col }, 340); c.style.transform = `rotate(${r}deg)`; }, i * 70));
+      break;
+    case 'jab':
+      for (let i = 0; i < 3; i++) setTimeout(() => stageFx('impact', cx + (Math.random() - .5) * w * 10, cy + (Math.random() - .5) * w * 10, { '--c':col }, 320), i * 70);
+      break;
+    case 'fire':
+      stageFx('impact', cx, cy, { '--c':'#ff8a1f' }, 320);
+      for (let i = 0; i < 7; i++) stageFx('flame', cx + (Math.random() - .5) * w * 12, cy + w * 4, { '--dx': ((Math.random() - .5) * w * 8) + 'px' }, 560);
+      break;
+    case 'boom':
+      stageFx('boom', cx, cy, null, 520); shake(true);
+      break;
+    case 'rain':
+      for (let i = 0; i < 4; i++) setTimeout(() => {
+        stageFx('needle', cx + (i - 1.5) * w * 4, cy - w * 6, null, 260);
+        setTimeout(() => stageFx('impact', cx + (i - 1.5) * w * 4, cy, { '--c':'#38bdf8' }, 250), 200);
+      }, i * 70);
+      break;
+    case 'drain': {
+      stageFx('impact', cx, cy, { '--c':col }, 320);
+      const p = stageXY($('#parade'));
+      for (let i = 0; i < 5; i++) setTimeout(() => {
+        const o = stageFx('orb', cx, cy, null, 520);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          o.style.transform = `translate(${p.x + p.w * (.5 + Math.random() * .5) - cx}px,${p.y + p.h * .6 - cy}px)`; o.style.opacity = '.3';
+        }));
+      }, i * 60);
+      break;
+    }
+    case 'seal':  stageFx('seal', cx, cy, null, 760).textContent = '封'; break;
+    case 'clock': stageFx('clock', cx, cy, null, 720); break;
+    case 'eye':   stageFx('eyefx', cx, cy, null, 520); break;
+    case 'mirror':
+      stageFx('impact', cx, cy, { '--c':'#e2e8f0' }, 320);
+      stageFx('cut', cx, cy, { '--c':'#fff' }, 340);
+      break;
+    default:
+      stageFx('impact', cx, cy, { '--c':col }, 320);
+  }
+}
+// 連続が切れたら行列が散る
+function scatterParade(){
+  const pr = $('#parade');
+  [...pr.children].forEach((c, i) => { c.style.animationDelay = (i * 30) + 'ms'; c.classList.add('flee'); setTimeout(() => c.remove(), 520 + i * 30); });
+}
+function comboBreak(){
+  if (B.combo <= 0) return;
+  B.combo = 0;
+  renderCombo();
+  scatterParade();
+  sfx('miss');
+}
+// 敵の攻撃：行列に斬撃。防げたら結界が光る
+function stageHit(got){
+  if (got > 0){ stageFx('slash', null, null, null, 320); pulse($('#parade'), 'hurt'); }
+  else pulse($('#barrier'), 'ping');
+}
+// 百鬼夜行中は、山札の妖怪が舞台を駆け抜け続ける
+function spawnRunner(){
+  const k = B.rng.pick(run.deck).k;
+  const d = ykEl(k);
+  d.classList.add('run');
+  const h = $('#stage').clientHeight;
+  d.style.left = (-h * .3) + 'px';
+  d.style.top = (h * (.3 + Math.random() * .4)) + 'px';
+  $('#stage').appendChild(d);
+  setTimeout(() => d.remove(), 1350);
+}
+
+/* ---------- 技の効果 ---------- */
+function hitFoe(base){
+  const e = B.e;
+  let d = Math.max(0, Math.round(base));
+  const ab = Math.min(e.blk, d);
+  e.blk -= ab; d -= ab;
+  e.hp = Math.max(0, e.hp - d);
+  if (B.hitLog) B.hitLog.push(d); else pulse($('#foe'), 'hit');   // やけど等はその場でのけぞる
+  floatNum($('#eHpBar').parentNode, d ? d : 'ガード', 'dmg', d >= 20);
+  if (e.hp <= 0) winBattle();
+}
+function heal(v){
+  const before = run.hp;
+  run.hp = Math.min(run.maxHp, run.hp + Math.round(v));
+  if (B && !B.over && run.hp > before){ floatNum($('#pHpBar').parentNode, '+' + (run.hp - before), 'heal'); sfx('heal'); }
+}
+function applySkill(k, u, m){
+  const sk = SK[k], v = sk.nv(u), str = B.p.str;
+  switch (k){
+    case 'zan':    hitFoe((v + str + (hasR('toishi') ? 3 : 0)) * m); break;
+    case 'ren':    hitFoe((v + str) * m); break;
+    case 'mamo':   B.p.blk += Math.round(v * m); floatNum($('#pHpBar').parentNode, '守+' + Math.round(v * m), 'blk'); break;
+    case 'kusuri': heal(v * m); break;
+    case 'zeni':   run.gold += Math.round(v * m); break;
+    case 'sukasu': peekRandom(v, 1200); break;
+    case 'en':     B.e.burn += Math.round(v * m); break;
+    case 'toki':   B.e.timer = Math.max(0, B.e.timer - v * 1000); break;
+    case 'kyu':    hitFoe((v + str) * m); heal((2 + u) * m); break;
+    case 'fuu':    B.e.weak += v; break;
+    case 'ka':     B.p.str += v; break;
+    case 'rai':    hitFoe((v * Math.max(1, B.combo) + str) * m); break;
+    case 'baku':   hitFoe((v + str) * m); hurtMe(2, true); break;
+    case 'ame':    for (let h = 0; h < 4 && !B.over; h++) hitFoe((v + str) * m); break;
+    case 'zen':
+      B.combo += 2;
+      B.slots.forEach((s, i) => { if (s && s.st === 'down'){ s.peekUntil = B.t + (u ? 1500 : 1000); renderSlot(i); } });
+      break;
+  }
+}
+function peekRandom(n, ms){
+  const downs = B.slots.map((s, i) => s && s.st === 'down' ? i : -1).filter(i => i >= 0);
+  B.rng.shuffle(downs).slice(0, n).forEach(i => { B.slots[i].peekUntil = B.t + ms; renderSlot(i); });
+}
+function hurtMe(d, pierce){
+  let dmg = Math.round(d);
+  if (!pierce){ const ab = Math.min(B.p.blk, dmg); B.p.blk -= ab; dmg -= ab; }
+  run.hp = Math.max(0, run.hp - dmg);
+  if (dmg > 0){
+    floatNum($('#pHpBar').parentNode, '-' + dmg, 'hurt', dmg >= 12);
+    pulse($('#hurtfx'), 'on');
+    if (dmg >= 8) shake(true);
+    buzz(40);
+    sfx('hurt');
+  }
+  if (run.hp <= 0 && B.fuku){ B.fuku = false; run.hp = 1; log('不屈！ HP1で踏みとどまった'); }
+  if (run.hp <= 0) loseBattle();
+  return dmg;
+}
+
+/* ---------- 敵の行動 ---------- */
+function curIntent(){ return B.f.it[B.e.step % B.f.it.length]; }
+function foeAct(){
+  const [t, v, n] = curIntent(), e = B.e;
+  const fe = $('#foe'); fe.classList.remove('act'); void fe.offsetWidth; fe.classList.add('act');
+  if (t === 'atk'){
+    const d = (v + e.str) * e.atkMul * (e.weak > 0 ? 0.6 : 1);
+    let got = 0;
+    for (let h = 0; h < (n || 1) && !B.over; h++) got += hurtMe(d);
+    stageHit(got);
+    if (!got) sfx('guard');
+    log(got ? `${B.f.n}の攻撃！ ${got} ダメージ` : `${B.f.n}の攻撃を防いだ！`);
+  } else if (t === 'def'){ e.blk += v; log(`${B.f.n}は身を守った`); }
+  if (t !== 'atk') sfx('foe');
+  else if (t === 'buff'){ e.str += v; log(`${B.f.n}の力が上がった`); }
+  else if (t === 'curse'){
+    for (let n = 0; n < v * 2; n++) B.pile.splice(B.rng.int(B.pile.length + 1), 0, { id:B.uid++, k:'noroi', u:0 });
+    log('呪いの札が山札に混ぜられた！');
+  } else if (t === 'freeze'){
+    const downs = B.slots.map((s, i) => s && s.st === 'down' ? i : -1).filter(i => i >= 0);
+    B.rng.shuffle(downs).slice(0, v).forEach(i => { B.slots[i].frozenUntil = B.t + 4500; renderSlot(i); });
+    log('札が凍らされた！');
+  } else if (t === 'shuffle'){
+    const idx = B.slots.map((s, i) => s && s.st === 'down' ? i : -1).filter(i => i >= 0);
+    const cs = B.rng.shuffle(idx.map(i => B.slots[i]));
+    idx.forEach((i, k) => { B.slots[i] = cs[k]; renderSlot(i); });
+    const bd = $('#board'); bd.classList.remove('stir'); void bd.offsetWidth; bd.classList.add('stir');
+    log('札がかき混ぜられた！');
+  }
+  if (e.weak > 0) e.weak--;
+  B.p.blk = hasR('teppeki') ? Math.floor(B.p.blk / 2) : 0;  // 防御は敵の行動ごとに消える
+  e.step++;
+}
+
+/* ---------- ループ ---------- */
+function loop(now){
+  if (!B || B.over) return;
+  const dt = Math.min(60, now - B.last);
+  B.last = now;
+  if (!B.paused) update(dt * DEBUG.speed);
+  requestAnimationFrame(loop);
+}
+function update(dt){
+  B.t += dt;
+  const e = B.e;
+  // 開いた札の時間切れ
+  for (const i of openSlots()) if (B.t - B.slots[i].at > openMs()) closeSlot(i, true);
+  // コンボの時間切れ
+  if (B.combo > 0 && B.t - B.lastMatch > COMBO_MS) comboBreak();
+  // 百鬼夜行中の大行列
+  if (B.fever && B.t - (B.lastRun || 0) > 140){ B.lastRun = B.t; spawnRunner(); }
+  // 百鬼夜行の終了
+  if (B.fever && B.t > B.feverEnd){ B.fever = false; $('#battle').classList.remove('fever'); for (let i = 0; i < SLOTS; i++) if (B.slots[i]) renderSlot(i); }
+  // 透かし・凍結の終了
+  B.slots.forEach((s, i) => {
+    if (!s) return;
+    if (s.peekUntil && s.peekUntil <= B.t){ s.peekUntil = 0; renderSlot(i); }
+    if (s.frozenUntil && s.frozenUntil <= B.t){ s.frozenUntil = 0; renderSlot(i); }
+  });
+  // 補充
+  B.queue = B.queue.filter(q => {
+    if (q.at > B.t) return true;
+    if (!B.slots[q.slot]){ dealTo(q.slot, true); renderSlot(q.slot); }
+    return false;
+  });
+  if (!B.queue.length) checkStuck();
+  // やけど
+  if (e.burn > 0){
+    B.burnAcc += dt;
+    if (B.burnAcc >= 1000){ B.burnAcc -= 1000; hitFoe(e.burn); e.burn--; if (B.over) return; }
+  }
+  // 敵のタイマー
+  e.timer += dt;
+  if (e.timer >= e.iv){ e.timer = 0; foeAct(); if (B.over) return; }
+  if (B.t - (B.lastSnap || 0) > SNAP_MS) snapBattle();
+  renderStatus();
+}
+
+// そろえられる組が盤に無ければ伏せ札を山に戻して配り直す
+function checkStuck(){
+  const live = B.slots.filter(s => s && (s.st === 'down' || s.st === 'open'));
+  if (live.length < 2) { if (!B.pile.length && !B.disc.length) return; }
+  const cnt = {};
+  let mirror = 0;
+  live.forEach(s => { if (s.c.k === 'kagami') mirror++; cnt[s.c.k] = (cnt[s.c.k] || 0) + 1; });
+  const ok = mirror > 0 && live.length >= 2 || Object.values(cnt).some(n => n >= 2);
+  if (ok) return;
+  B.slots.forEach((s, i) => {
+    if (s && s.st === 'down'){ B.pile.unshift(s.c); B.slots[i] = null; }
+  });
+  B.rng.shuffle(B.pile);
+  for (let i = 0; i < SLOTS; i++) if (!B.slots[i]){ dealTo(i); }
+  for (let i = 0; i < SLOTS; i++) renderSlot(i);
+  log('そろう札が無いので配り直した');
+}
+
+/* ---------- 表示 ---------- */
+function renderStatus(){
+  const e = B.e;
+  $('#eHpBar').style.width = (e.hp / e.max * 100) + '%';
+  $('#eHp').innerHTML = `${e.hp}<small>/${e.max}</small>`;
+  const [t, v, n] = curIntent();
+  const ic = $('#eIntent');
+  const atk = Math.round((v + e.str) * e.atkMul * (e.weak > 0 ? 0.6 : 1));
+  ic.className = 'ic ' + (t === 'atk' ? 'atk' : t === 'def' ? 'def' : 'special');
+  ic.textContent = t === 'atk' ? `攻撃 ${atk}${n > 1 ? '×' + n : ''}` : t === 'shuffle' ? 'かき混ぜ' : t === 'def' ? `防御 ${v}` : t === 'buff' ? '力をためる' : t === 'curse' ? '呪い' : t === 'freeze' ? '凍結' : '';
+  // 敵の攻撃までの輪（時計回りに溜まり、4分の3を超えると赤く光る）
+  const k = e.timer / e.iv, hot = k > .75, deg = Math.round(k * 360);
+  const ring = $('#ring');
+  ring.style.background = `conic-gradient(${hot ? 'var(--red)' : 'var(--yellow)'} ${deg}deg, #120e30 ${deg}deg)`;
+  ring.classList.toggle('hot', hot);
+  $('#ringK').textContent = B.f.e;
+  $('#eTags').innerHTML = (e.blk ? `<span class="tag blk">防御 ${e.blk}</span>` : '') + (e.burn ? `<span class="tag burn">やけど ${e.burn}</span>` : '')
+    + (e.weak ? `<span class="tag weak">弱体 ${e.weak}</span>` : '') + (e.str ? `<span class="tag str">力 +${e.str}</span>` : '');
+  $('#pHpBar').style.width = (run.hp / run.maxHp * 100) + '%';
+  $('#pHp').innerHTML = `${run.hp}<small>/${run.maxHp}</small>`;
+  $('#pHp').classList.toggle('low', run.hp <= run.maxHp * .3);
+  $('#barrier').classList.toggle('on', B.p.blk > 0);
+  // 防御・筋力は場所を確保したまま見せたり隠したりする（出ても他が動かない）
+  const pb = $('#pBlk'), ps = $('#pStr');
+  pb.textContent = `守${B.p.blk}`; pb.style.visibility = B.p.blk ? 'visible' : 'hidden';
+  ps.textContent = `力+${B.p.str}`; ps.style.visibility = B.p.str ? 'visible' : 'hidden';
+  $('#tGold').textContent = run.gold;
+  $('#tFloor').textContent = run.floor;
+  $('#fPile').textContent = `山 ${B.pile.length}`;
+  $('#fDisc').textContent = `捨 ${B.disc.length}`;
+  const cb = B.combo ? Math.max(0, 1 - (B.t - B.lastMatch) / COMBO_MS) : 0;
+  $('#cBar').style.width = (cb * 100) + '%';
+}
+function renderCombo(){
+  $('#cNum').innerHTML = `${B.combo}<small>連${B.fever ? ' 百鬼夜行中' : B.combo ? ` ×${mult().toFixed(2)}` : ''}</small>`;
+}
+function renderAll(){ renderStatus(); renderCombo(); }
+function log(t){ $('#log').textContent = t; wrapJP($('#log')); }
+
+/* ---------- 日本語の改行 ----------
+   iPhone のブラウザは日本語を文節で改行できないので、改行してよい所に <wbr> を入れる。
+   CSS で keep-all にしているので、目印の無い所では改行しない（「1」「つ）」のような泣き別れを防ぐ）。
+   目印：句読点・閉じ括弧の後、開き括弧の前、ひらがな→漢字・カタカナ・数字に切り替わる所。 */
+const JP_OPEN = '（「『【〔(', JP_CLOSE = '、。，．！？!?）」』】〕)…／';
+const JP_HIRA = /[\u3041-\u309F]/, JP_WORD = /[\u30A0-\u30FF\u4E00-\u9FFF0-9０-９A-Za-zＡ-Ｚ＋+×]/;
+// ひらがなを含む言葉で、途中で切りたくないもの
+const JP_KEEP = ['お守り', 'その場', '形の紋', '幕の主', '落とし物', '伏せ札', '捨て札', 'かき混ぜ', '見せる', 'つづきから', 'あらわれた', '祓った', 'ため込', '立ち去る'];
+const JP_BRACKET_CLOSE = '」』）)】〕';
+function jpBreaks(t){
+  const keep = new Array(t.length).fill(false);
+  JP_KEEP.forEach(w => { let i = -1; while ((i = t.indexOf(w, i + 1)) >= 0) for (let k = i; k < i + w.length - 1; k++) keep[k] = true; });
+  const cuts = [];
+  for (let i = 0; i < t.length - 1; i++){
+    const c = t[i], n = t[i + 1];
+    if (keep[i] || JP_CLOSE.includes(n) || c === ' ' || n === ' ' || c === '　') continue;
+    if (JP_BRACKET_CLOSE.includes(c) && JP_HIRA.test(n)) continue;                 // 「…」で｜ のように助詞の後ろで切る
+    if ((c === 'お' || c === 'ご') && (i === 0 || !JP_HIRA.test(t[i - 1]))) continue;  // 言葉の頭の「お・ご」の後では切らない
+    if (JP_CLOSE.includes(c) || (JP_OPEN.includes(n) && !JP_OPEN.includes(c)) || (JP_HIRA.test(c) && JP_WORD.test(n))) cuts.push(i);
+  }
+  return cuts;
+}
+function wrapJP(root){
+  if (!root) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(tn => {
+    const t = tn.nodeValue, cuts = t.length > 4 ? jpBreaks(t) : [];
+    if (!cuts.length) return;
+    const frag = document.createDocumentFragment();
+    let last = 0;
+    cuts.forEach(i => { frag.append(t.slice(last, i + 1), document.createElement('wbr')); last = i + 1; });
+    frag.append(t.slice(last));
+    tn.replaceWith(frag);
+  });
+}
+
+/* ---------- 勝敗 ---------- */
+function addStats(){
+  const S = run.stats, b = B.stats;
+  S.taps += b.taps; S.matches += b.matches; S.misses += b.misses; S.fevers += b.fevers;
+  S.maxCombo = Math.max(S.maxCombo, b.maxCombo); S.ms += B.t; S.battles++;
+}
+// 盤面の真上に大きく結果を出し、盤面を暗くする
+function endOverlay(big, small, lose){
+  renderStatus();   // 決着の瞬間のHP（0）を表示に反映してから止める
+  $('#battle').classList.add('ended');
+  bgmJingle(lose ? 'lose' : 'win');
+  const d = document.createElement('div');
+  d.className = 'endov' + (lose ? ' lose' : '');
+  d.innerHTML = `<b>${big}</b><span>${small}</span>`;
+  wrapJP(d);
+  $('#board').appendChild(d);
+}
+// 画面が切り替わった直後のタップを受け付けない
+const GUARD_MS = 400;
+function guardScreen(id){
+  const el = $('#' + id);
+  el.classList.add('guard');
+  clearTimeout(el._guard);
+  el._guard = setTimeout(() => el.classList.remove('guard'), GUARD_MS);
+}
+function winBattle(){
+  if (B.over) return;
+  B.over = true;
+  addStats();
+  run.battle = null;
+  if (run.pending) run.pending.won = true;
+  save();
+  log(`${B.f.n} を退散させた！`);
+  $('#foe').classList.add('dead');
+  endOverlay('退散!!', `${B.f.n} は闇に消えた`, false);
+  sfx('win');
+  shake(true);
+  buzz([40, 30, 80]);
+  setTimeout(afterWin, 1500);
+}
+function loseBattle(){
+  if (B.over) return;
+  B.over = true;
+  addStats();
+  run.battle = null;
+  if (run.pending) run.pending.lost = true;
+  save();
+  log('力尽きた…');
+  endOverlay('力尽きた…', `${B.f.n} に敗れた`, true);
+  sfx('lose');
+  setTimeout(gameOver, 1500);
+}
+
+/* ---------- 報酬の札 ---------- */
+// kind: fight / elite / boss / shop
+function rollRarity(r, kind){
+  const x = r.next();
+  const [rare, unc] = kind === 'boss' ? [.5, .9] : kind === 'elite' ? [.15, .55] : kind === 'shop' ? [.12, .45] : [.07, .37];
+  return x < rare ? 2 : x < unc ? 1 : 0;
+}
+function cardChoices(n, kind){
+  const { r, done } = rrng();
+  const out = [];
+  while (out.length < n){
+    const rar = rollRarity(r, kind);
+    const cand = POOL.filter(k => SK[k].r === rar && !out.includes(k));
+    if (cand.length) out.push(r.pick(cand));
+  }
+  done();
+  return out;
+}
+function cardPickHTML(k, u, cnt){
+  const sk = SK[k];
+  return `<div class="mini" style="--k:${sk.col}">${monSVG(k)}<span class="mk">${sk.n}</span>${cnt ? `<span class="x2">${cnt}組</span>` : ''}</div>`
+       + `<div><div class="nm">${sk.n}${u ? '＋' : ''}　<small>${RAR_NAME[sk.r] || ''}</small></div><div class="ds">${sk.d(u)}</div></div>`;
+}
+
+// 強化の見本：変わる数字を「6→9」のように出す（文の形が変わる札は「いま／強化後」の2行）
+function upgradeDiff(k){
+  const sk = SK[k], a = sk.d(0).split(/(\d+(?:\.\d+)?)/), b = sk.d(1).split(/(\d+(?:\.\d+)?)/);
+  if (a.length === b.length && a.every((x, i) => i % 2 || x === b[i]))
+    return a.map((x, i) => i % 2 && x !== b[i] ? `<span class="ug">${x}→<em>${b[i]}</em></span>` : (i % 2 ? x : b[i])).join('');
+  return `いま：${sk.d(0)}<br>強化後：<em>${sk.d(1)}</em>`;
+}
+function upgradePickHTML(k, cnt){
+  const sk = SK[k];
+  return `<div class="mini" style="--k:${sk.col}">${monSVG(k)}<span class="mk">${sk.n}</span>${cnt ? `<span class="x2">${cnt}組</span>` : ''}</div>`
+       + `<div><div class="nm">${sk.n} → ${sk.n}＋　<small>${RAR_NAME[sk.r] || ''}</small></div><div class="ds">${upgradeDiff(k)}</div></div>`;
+}
+
+/* ---------- お守り（レリック） ---------- */
+const RELICS = {
+  chishio: { n:'血潮',   e:'血', d:'戦闘に勝つとHP6回復', start:true },
+  yotsume: { n:'四つ目', e:'目', d:'同時に4枚まで開ける' },
+  nagame:  { n:'長目',   e:'長', d:'開いた札が0.4秒長く開いている' },
+  sakiyomi:{ n:'先読み', e:'先', d:'戦闘開始時、全部の札を1.5秒見せる' },
+  toishi:  { n:'砥石',   e:'砥', d:'斬のダメージ +3' },
+  teppeki: { n:'鉄壁',   e:'壁', d:'敵が行動しても防御が半分残る' },
+  hidane:  { n:'火種',   e:'火', d:'戦闘開始時、敵にやけど6' },
+  nekkyo:  { n:'熱狂',   e:'熱', d:'百鬼夜行が6連で始まる' },
+  yonetsu: { n:'余熱',   e:'余', d:'百鬼夜行が2秒長い' },
+  kinun:   { n:'金運',   e:'金', d:'戦闘で得る銭が1.5倍' },
+  maneki:  { n:'招き猫', e:'猫', d:'店の値段が2割引' },
+  fukutsu: { n:'不屈',   e:'屈', d:'各戦闘で1回、倒れてもHP1で踏みとどまる' },
+  nitou:   { n:'二刀',   e:'刀', d:'5回そろえるごとに、その技が2回出る' },
+  hakuhyo: { n:'薄氷',   e:'氷', d:'敵の行動が1割遅くなる' },
+  rengai:  { n:'連鎖鎧', e:'鎧', d:'そろえるたびに防御 +1' },
+  // ボスのお守り（強いが癖がある）
+  onime:   { n:'鬼の目', e:'鬼', d:'同時に5枚まで開ける。ただし開いている時間 -0.3秒', boss:true },
+  kyoran:  { n:'狂乱',   e:'狂', d:'連続の倍率が2倍。ただし札が外れて閉じるたび自分に1ダメージ', boss:true },
+  ougon:   { n:'黄金札', e:'黄', d:'戦闘で得る銭が2倍。ただし最大HP -10', boss:true },
+};
+const hasR = id => !!run && run.relics.includes(id);
+function maxOpen(){ return MAX_OPEN + (hasR('yotsume') ? 1 : 0) + (hasR('onime') ? 2 : 0); }
+function openMs(){ return OPEN_MS + (hasR('nagame') ? 400 : 0) - (hasR('onime') ? 300 : 0); }
+function feverAt(){ return hasR('nekkyo') ? 6 : FEVER_AT; }
+function goldMul(){ return (hasR('kinun') ? 1.5 : 1) * (hasR('ougon') ? 2 : 1); }
+function gainRelic(id){
+  if (run.relics.includes(id)) return;
+  run.relics.push(id);
+  if (id === 'ougon'){ run.maxHp -= 10; run.hp = Math.min(run.hp, run.maxHp); }
+}
+function relicChoices(n, boss){
+  const { r, done } = rrng();
+  const pool = Object.keys(RELICS).filter(k => !RELICS[k].start && !!RELICS[k].boss === !!boss && !run.relics.includes(k) && !LOCKED_RELICS.includes(k));
+  const out = r.shuffle(pool).slice(0, n);
+  done();
+  return out;
+}
+function relicHTML(id){
+  const R = RELICS[id];
+  return `<div class="mini relic${R.boss ? ' boss' : ''}">${R.e}</div><div><div class="nm">${R.n}</div><div class="ds">${R.d}</div></div>`;
+}
+
+/* ---------- マップ ---------- */
+const MAP_ROWS = 7, MAP_COLS = 4;
+const NODE = {
+  fight:   { e:'戦', n:'戦闘' },
+  elite:   { e:'強', n:'強敵' },
+  rest:    { e:'休', n:'休憩' },
+  shop:    { e:'店', n:'店' },
+  event:   { e:'？', n:'できごと' },
+  treasure:{ e:'宝', n:'宝箱' },
+  boss:    { e:'主', n:'幕の主' },
+};
+function genMap(act){
+  const r = makeRng(hashStr(run.seed + '|map|' + act));
+  const nodes = {}, edges = new Set();
+  const key = (row, col) => row * 10 + col;
+  const starts = r.shuffle([0, 1, 2, 3]);
+  for (let p = 0; p < 4; p++){
+    let col = p < 2 ? starts[p] : r.int(MAP_COLS);
+    for (let row = 0; row < MAP_ROWS; row++){
+      nodes[key(row, col)] = { id:key(row, col), row, col };
+      if (row < MAP_ROWS - 1){
+        const nc = Math.max(0, Math.min(MAP_COLS - 1, col + r.int(3) - 1));
+        edges.add(key(row, col) + '-' + key(row + 1, nc));
+        col = nc;
+      }
+    }
+  }
+  Object.values(nodes).forEach(n => {
+    if (n.row === 0) n.type = 'fight';
+    else if (n.row === 3) n.type = 'treasure';
+    else if (n.row === MAP_ROWS - 1) n.type = 'rest';
+    else {
+      const bag = [['fight', 48], ['event', 22], ['shop', 10]];
+      if (n.row >= 2) bag.push(['elite', 14]);
+      if (n.row >= 2 && n.row !== MAP_ROWS - 2) bag.push(['rest', 8]);
+      let x = r.next() * bag.reduce((s, b) => s + b[1], 0);
+      n.type = bag.find(b => (x -= b[1]) < 0)[0];
+    }
+  });
+  const BOSS = 99;
+  nodes[BOSS] = { id:BOSS, row:MAP_ROWS, col:1.5, type:'boss' };
+  Object.values(nodes).filter(n => n.row === MAP_ROWS - 1).forEach(n => edges.add(n.id + '-' + BOSS));
+  return { nodes, edges:[...edges].map(e => e.split('-').map(Number)) };
+}
+function nextNodes(){
+  const m = run.map;
+  if (run.at < 0) return Object.values(m.nodes).filter(n => n.row === 0).map(n => n.id);
+  return m.edges.filter(e => e[0] === run.at).map(e => e[1]);
+}
+
+function enterMap(){
+  B = null;
+  show('map');
+  renderMapHead();
+  const box = $('#mapBox'), svg = $('#mapSvg');
+  const m = run.map, nexts = nextNodes();
+  const W = box.clientWidth, rowH = W * 0.24, H = rowH * (MAP_ROWS + 1) + W * 0.2;
+  box.style.height = H + 'px';
+  const pos = n => ({ x: W * (0.14 + n.col * 0.24), y: H - W * 0.12 - n.row * rowH });
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  svg.innerHTML = m.edges.map(([a, b]) => {
+    const p = pos(m.nodes[a]), q = pos(m.nodes[b]);
+    const on = run.path.includes(a) && run.path.includes(b);
+    return `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" class="${on ? 'walked' : ''}"/>`;
+  }).join('');
+  box.querySelectorAll('.node').forEach(e => e.remove());
+  Object.values(m.nodes).forEach(n => {
+    const p = pos(n), el = document.createElement('button');
+    const can = nexts.includes(n.id), done = run.path.includes(n.id);
+    el.className = `node t-${n.type}${can ? ' can' : ''}${done ? ' done' : ''}${n.id === run.at ? ' here' : ''}`;
+    el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
+    el.textContent = NODE[n.type].e;
+    el.addEventListener('click', () => { if (can) enterNode(n); else toast(NODE[n.type].n); });
+    box.appendChild(el);
+  });
+  // 次に行ける所が見えるようにスクロール
+  const sc = $('#mapScroll');
+  const tgt = nexts.length ? pos(m.nodes[nexts[0]]).y : H;
+  sc.scrollTop = Math.max(0, tgt - sc.clientHeight * 0.7);
+  save();
+}
+function renderMapHead(){
+  $('#mHp').textContent = `HP ${run.hp}/${run.maxHp}`;
+  $('#mGold').textContent = run.gold;
+  $('#mAct').textContent = `第${run.act}幕` + (run.asc ? ` 闇${run.asc}` : '');
+  $('#mDeck').textContent = `山札 ${run.deck.length}組`;
+  renderRelicRow($('#mRelics'));
+}
+function renderRelicRow(box){
+  box.innerHTML = '';
+  run.relics.forEach(id => {
+    const el = document.createElement('button');
+    el.className = 'rchip' + (RELICS[id].boss ? ' boss' : '');
+    el.textContent = RELICS[id].e;
+    el.addEventListener('click', () => toast(RELICS[id].d, RELICS[id].n));
+    box.appendChild(el);
+  });
+}
+// name を渡すと「上＝名前、下＝説明」の2行で出す（お守り）
+function toast(t, name){
+  const el = $('#toast');
+  el.innerHTML = '';
+  if (name){
+    const n = document.createElement('div'); n.className = 'tn'; n.textContent = name;
+    const d = document.createElement('div'); d.className = 'td'; d.textContent = t;
+    el.append(n, d);
+  } else el.textContent = t;
+  wrapJP(el);
+  el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+}
+
+function enterNode(n){
+  run.at = n.id;
+  run.path.push(n.id);
+  run.floor++;
+  const act = ACTS[run.act - 1];
+  const { r, done } = rrng();
+  let foe = null;
+  if (n.type === 'fight'){
+    // 序盤2戦は弱めの敵から
+    const pool = run.floor <= 2 ? act.easy : act.normal;
+    foe = r.pick(pool.filter(f => f !== run.lastFoe).length ? pool.filter(f => f !== run.lastFoe) : pool);
+  }
+  if (n.type === 'elite') foe = r.pick(act.elite);
+  if (n.type === 'boss') foe = act.boss;
+  done();
+  if (foe){ run.lastFoe = foe; run.pending = { foe, kind:n.type }; run.battle = null; save(); startBattle(foe); return; }
+  if (n.type === 'rest') return openRest();
+  if (n.type === 'shop') return openShop();
+  if (n.type === 'event') return openEvent();
+  if (n.type === 'treasure'){
+    const [id] = relicChoices(1, false);
+    if (id) gainRelic(id);
+    return chooser({ title:'宝箱', sub: id ? 'お守りを手に入れた！' : '空っぽだった…',
+      items: id ? [{ html:relicHTML(id), cls:'' }] : [], btn:{ label:'すすむ', on:enterMap } });
+  }
+}
+
+/* ---------- 汎用の選択画面 ---------- */
+function chooser(args){
+  const { title, sub, items, btn, guard } = args;
+  ui.lastChooser = args;
+  ui.titleInfo = !!args.info;   // タイトルから開いた説明の画面
+  $('#cTitle').textContent = title;
+  $('#cSub').innerHTML = sub || '';
+  const box = $('#cItems');
+  box.innerHTML = '';
+  items.forEach(it => {
+    const b = document.createElement('button');
+    b.className = 'pick ' + (it.cls || '');
+    b.innerHTML = it.html;
+    if (it.disabled) b.disabled = true;
+    if (it.on) b.addEventListener('click', it.on); else b.classList.add('static');
+    box.appendChild(b);
+  });
+  const bb = $('#cBtn');
+  bb.style.display = btn ? '' : 'none';
+  if (btn){ bb.textContent = btn.label; bb.onclick = btn.on; }
+  wrapJP($('#cSub'));
+  wrapJP(box);
+  show('choose');
+  if (guard) guardScreen('choose');   // 誤タップ防止は戦闘の直後だけ（連打の勢いで報酬を選ばないように）
+  $('#cItems').scrollTop = 0;
+}
+
+/* ---------- 戦闘の後 ---------- */
+function afterWin(){
+  const kind = run.pending ? run.pending.kind : 'fight';
+  run.pending = null;
+  if (hasR('chishio')) heal(6);
+  const base = kind === 'boss' ? 70 : kind === 'elite' ? 32 : 14;
+  const { r, done } = rrng();
+  const gold = Math.round((base + r.int(8)) * goldMul());
+  done();
+  run.gold += gold;
+  const lines = [`銭 +${gold}`];
+  let relic = null;
+  if (kind === 'elite'){ [relic] = relicChoices(1, false); if (relic){ gainRelic(relic); lines.push(`お守り「${RELICS[relic].n}」`); } }
+  const then = kind === 'boss' ? bossRelicPick : enterMap;
+  const picks = cardChoices(3, kind);
+  chooser({ title: kind === 'boss' ? '幕の主の落とし物' : '落とし物', sub: lines.join('　') + '<br>札を1組えらぶ',
+    items: picks.map(k => ({ html:cardPickHTML(k, 0), cls:'rar' + SK[k].r, on:() => { run.deck.push({ k, u:0 }); then(); } })),
+    btn:{ label:'いらない', on:then }, guard:true });
+}
+function bossRelicPick(){
+  const ids = relicChoices(3, true);
+  chooser({ title:'幕の主のお守り', sub:'1つえらぶ（強いが癖がある）',
+    items: ids.map(id => ({ html:relicHTML(id), cls:'', on:() => { gainRelic(id); actClear(); } })),
+    btn:{ label:'いらない', on:actClear } });
+}
+function actClear(){
+  run.bosses++;
+  if (run.act >= ACTS.length) return endRun(true);
+  run.act++;
+  run.map = genMap(run.act);
+  run.at = -1;
+  run.path = [];
+  const h = Math.round(run.maxHp * 0.5);
+  heal(h);
+  save();
+  chooser({ title:`第${run.act - 1}幕を越えた`, sub:`ひと息ついた。HP ${h} 回復<br>次は第${run.act}幕`, items:[], btn:{ label:'すすむ', on:enterMap } });
+}
+function gameOver(){ endRun(false); }
+
+/* ---------- めくり熱 ----------
+   タップの速さ・外しの多さ・最大連続・百鬼夜行の多さから、指の熱さ（℃）と称号を出す */
+function mekuriHeat(S){
+  const sec = Math.max(1, S.ms / 1000);
+  const tps = S.taps / sec;
+  const miss = S.misses / Math.max(1, S.taps);
+  const fev = S.fevers / Math.max(1, S.battles);
+  const pct = Math.max(1, Math.min(100, Math.round(
+    Math.min(tps / 3.5, 1) * 45 + Math.min(miss / .5, 1) * 20 + Math.min(S.maxCombo / 25, 1) * 20 + Math.min(fev, 1) * 15)));
+  const fast = tps >= 2.4, messy = miss >= .35, fv = fev >= .5;
+  const T = {
+    '111':['脳汁ジェットコースター','速い・雑・百鬼夜行の三拍子。指が燃えている'],
+    '110':['連打の申し子','考えるより先に指が動いている'],
+    '101':['瞬間記憶の百鬼使い','速くて正確。百鬼夜行を呼ぶ者'],
+    '100':['瞬間記憶マシン','速いのに外さない。冷えた指先'],
+    '011':['たまたま天才','ゆっくりめくって大当たりを引く'],
+    '010':['のんびりガチャ勢','めくってみてから考えるタイプ'],
+    '001':['じっくり大爆発型','溜めて溜めて百鬼夜行で解放'],
+    '000':['慎重派の記憶術師','勢いより記憶。神経衰弱の正統派'],
+  }[`${+fast}${+messy}${+fv}`];
+  return { pct, deg: Math.round(35 + pct * 0.65), name:T[0], note:T[1], tps };
+}
+
+function endRun(win){
+  const r = run;
+  const S = r.stats;
+  const score = r.floor * 10 + r.bosses * 100 + (win ? 500 : 0) + r.asc * 50;
+  const d = loadSave();
+  const meta = loadMeta();
+  const before = unlockedCount(meta);
+  meta.runs++;
+  if (win){ meta.wins++; meta.maxAsc = Math.max(meta.maxAsc, Math.min(ASC.length - 1, r.asc + 1)); }
+  const prevBest = meta.best;
+  meta.best = Math.max(meta.best, score);
+  meta.pts += r.floor + r.bosses * 10;
+  const after = unlockedCount(meta);
+  d.meta = meta;
+  d.run = null;
+  writeSave(d);
+  run = null;
+  applyUnlocks();
+  const items = [];
+  for (let i = before; i < after; i++){
+    const [t, id] = UNLOCKS[i];
+    items.push({ html: t === 'card' ? cardPickHTML(id, 0) : relicHTML(id), cls:'' });
+  }
+  const sec = Math.round(S.ms / 1000);
+  const dg = mekuriHeat(S);
+  // 結果：到達 → めくり熱（温度・称号・一言）→ 数字の表 → 解放、の順に縦に並べる
+  const cell = (v, label, cls) => `<div class="rc${cls ? ' ' + cls : ''}"><b>${v}</b><span>${label}</span></div>`;
+  const html = `
+    <div class="res">
+      <div class="res-reach">${win ? '三幕を越え、夜が明けた' : `第${r.act}幕 ${r.floor}階で力尽きた`}${r.asc ? `<em>闇${r.asc}</em>` : ''}</div>
+      <div class="res-heat">
+        <div class="hl">めくり熱</div>
+        <div class="hd">${dg.deg}<small>℃</small></div>
+        <div class="hn">${dg.name}</div>
+        <div class="hx">${dg.note}</div>
+        <div class="ht">毎秒 ${dg.tps.toFixed(1)} タップ</div>
+      </div>
+      <div class="res-grid">
+        ${cell(score, '得点', score > prevBest ? 'best' : '')}${cell(meta.best, '最高得点')}${cell(S.matches, 'そろえた回数')}
+        ${cell(S.maxCombo, '最大連続')}${cell(S.fevers, '百鬼夜行')}${cell(`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`, '戦闘時間')}
+      </div>
+      ${win && meta.maxAsc > r.asc ? `<div class="res-note">闇${r.asc + 1} に挑めるようになった</div>` : ''}
+      <div class="res-sec">${items.length ? '新しく解放' : (after < UNLOCKS.length ? `次の解放まで あと${UNLOCK_STEP - meta.pts % UNLOCK_STEP}` : 'すべて解放済み')}</div>
+    </div>`;
+  chooser({ title: win ? '夜明け' : '力尽きた…', sub: html, items, btn:{ label:'タイトルへ', on:enterTitle }, guard:!win });
+}
+
+/* ---------- 休憩 ---------- */
+function openRest(){
+  const h = Math.round(run.maxHp * (asc(5) ? 0.2 : 0.3));
+  chooser({ title:'休憩所', sub:`HP ${run.hp}/${run.maxHp}`,
+    items:[
+      { html:`<div class="mini" style="--k:#4e7d3c">休</div><div><div class="nm">休む</div><div class="ds">HP ${h} 回復</div></div>`,
+        on:() => { heal(h); enterMap(); } },
+      { html:`<div class="mini" style="--k:#a8872e">鍛</div><div><div class="nm">鍛える</div><div class="ds">札を1組強化する（数字が大きくなる）</div></div>`,
+        on:() => deckPicker('強化する札', e => !e.u && SK[e.k].r >= 0, e => { e.u = 1; enterMap(); toast(SK[e.k].d(1), `${SK[e.k].n}＋ になった`); }, openRest, true) },
+    ] });
+}
+// 山札から1組えらぶ
+function deckPicker(title, filter, onPick, onBack, upgrade){
+  const items = [];
+  const seen = new Set();
+  run.deck.forEach(e => {
+    const key = e.k + e.u;
+    if (seen.has(key) || !filter(e)) return;
+    seen.add(key);
+    const cnt = run.deck.filter(x => x.k === e.k && x.u === e.u).length;
+    items.push({ html:upgrade ? upgradePickHTML(e.k, cnt) : cardPickHTML(e.k, e.u, cnt), cls:'rar' + SK[e.k].r, on:() => onPick(e) });
+  });
+  chooser({ title, sub:upgrade ? '強化する札をえらぶ（同じ札の1組だけが強くなる）' : '札をえらぶ', items, btn:{ label:'もどる', on:onBack } });
+}
+
+/* ---------- 店 ---------- */
+const PRICE = [48, 74, 120];
+function priceMul(){ return (hasR('maneki') ? 0.8 : 1) * (asc(9) ? 1.1 : 1); }
+function openShop(){
+  if (!run.shop || run.shop.at !== run.at){
+    const { r, done } = rrng();
+    const cards = [];
+    while (cards.length < 5){
+      const rar = rollRarity(r, 'shop');
+      const cand = POOL.filter(k => SK[k].r === rar && !cards.some(c => c.k === k));
+      if (cand.length) cards.push({ k:r.pick(cand), sold:false });
+    }
+    cards.forEach(c => { c.p = Math.round(PRICE[SK[c.k].r] * (0.9 + r.next() * 0.2)); });
+    done();
+    const relics = relicChoices(2, false).map(id => ({ id, p:130 + run.act * 10 + (hashStr(id) % 40), sold:false }));
+    run.shop = { at:run.at, cards, relics, removed:false };
+  }
+  renderShop();
+}
+function renderShop(){
+  const sh = run.shop, pm = priceMul();
+  const items = [];
+  sh.cards.forEach(c => {
+    const p = Math.round(c.p * pm);
+    items.push({ html:cardPickHTML(c.k, 0) + `<span class="price">${c.sold ? '売切' : '銭' + p}</span>`, cls:'rar' + SK[c.k].r,
+      disabled: c.sold || run.gold < p, on:() => { run.gold -= p; c.sold = true; run.deck.push({ k:c.k, u:0 }); save(); renderShop(); } });
+  });
+  sh.relics.forEach(x => {
+    const p = Math.round(x.p * pm);
+    items.push({ html:relicHTML(x.id) + `<span class="price">${x.sold ? '売切' : '銭' + p}</span>`,
+      disabled: x.sold || run.gold < p, on:() => { run.gold -= p; x.sold = true; gainRelic(x.id); save(); renderShop(); } });
+  });
+  const rp = Math.round((60 + run.removes * 25) * pm);
+  items.push({ html:`<div class="mini" style="--k:#3b3631">捨</div><div><div class="nm">札を1組捨てる</div><div class="ds">山札を軽くする（店ごとに1回）</div></div><span class="price">${sh.removed ? '済' : '銭' + rp}</span>`,
+    disabled: sh.removed || run.gold < rp || run.deck.length <= 4,
+    on:() => deckPicker('捨てる札', () => true, e => { run.deck.splice(run.deck.indexOf(e), 1); run.gold -= rp; run.removes++; sh.removed = true; save(); renderShop(); }, renderShop) });
+  chooser({ title:'店', sub:`所持 銭${run.gold}`, items, btn:{ label:'店を出る', on:enterMap } });
+}
+
+/* ---------- できごと ---------- */
+const EVENTS = [
+  { t:'怪しい札売り', d:'「いい札があるよ…銭30でどうだい」',
+    ch:[ ['銭30で買う', () => run.gold >= 30, () => { run.gold -= 30; const k = randCard(2); run.deck.push({ k, u:0 }); return `「${SK[k].n}」を1組手に入れた`; }],
+         ['立ち去る', () => true, () => '何事もなかった'] ] },
+  { t:'古い祠', d:'苔むした祠。血を捧げれば加護があるという。',
+    ch:[ ['HP8を捧げる', () => run.hp > 8, () => { run.hp -= 8; const [id] = relicChoices(1, false); if (id){ gainRelic(id); return `お守り「${RELICS[id].n}」を授かった`; } return '何も起きなかった'; }],
+         ['立ち去る', () => true, () => '何事もなかった'] ] },
+  { t:'札の泉', d:'澄んだ泉。札を浸すと何かが起きそうだ。',
+    ch:[ ['札を1組沈める（捨てる）', () => run.deck.length > 4, () => 'pickRemove'],
+         ['札を1組清める（強化）', () => run.deck.some(e => !e.u), () => 'pickUpgrade'] ] },
+  { t:'賭場', d:'「銭20張って、丁か半か！」',
+    ch:[ ['銭20を賭ける', () => run.gold >= 20, () => { const { r, done } = rrng(); const win = r.next() < .5; done(); run.gold += win ? 30 : -20; return win ? '当たり！ 銭+30' : 'はずれ… 銭-20'; }],
+         ['立ち去る', () => true, () => '何事もなかった'] ] },
+  { t:'迷い猫', d:'お腹をすかせた猫がついてくる。',
+    ch:[ ['餌をあげる（銭-10）', () => run.gold >= 10, () => { run.gold -= 10; run.deck.push({ k:'kusuri', u:1 }); return '猫が「薬＋」を1組くわえてきた'; }],
+         ['なでる', () => true, () => { heal(5); return 'なごんだ。HP5回復'; }] ] },
+];
+function randCard(rar){ const { r, done } = rrng(); const k = r.pick(POOL.filter(k => SK[k].r === rar)); done(); return k; }
+function openEvent(){
+  const { r, done } = rrng();
+  const ev = EVENTS[r.int(EVENTS.length)];
+  done();
+  chooser({ title:ev.t, sub:ev.d, items: ev.ch.map(([label, can, act]) => ({
+    html:`<div><div class="nm">${label}</div></div>`, disabled:!can(),
+    on:() => {
+      const res = act();
+      if (res === 'pickRemove') return deckPicker('沈める札', () => true, e => { run.deck.splice(run.deck.indexOf(e), 1); eventDone('札を1組手放した'); }, openEvent);
+      if (res === 'pickUpgrade') return deckPicker('清める札', e => !e.u && SK[e.k].r >= 0, e => { e.u = 1; eventDone(`「${SK[e.k].n}」が強化された（${SK[e.k].d(1)}）`); }, openEvent, true);
+      eventDone(res);
+    } })) });
+}
+function eventDone(msg){ chooser({ title:'結果', sub:msg, items:[], btn:{ label:'すすむ', on:enterMap } }); }
+
+/* ---------- 山札を見る ---------- */
+function showDeck(back){
+  const items = [];
+  const seen = new Set();
+  run.deck.slice().sort((a, b) => SK[a.k].r - SK[b.k].r).forEach(e => {
+    const key = e.k + e.u;
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push({ html:cardPickHTML(e.k, e.u, run.deck.filter(x => x.k === e.k && x.u === e.u).length), cls:'rar' + SK[e.k].r });
+  });
+  chooser({ title:'山札', sub:`${run.deck.length}組（${run.deck.length * 2}枚）`, items, btn:{ label:'もどる', on:back } });
+}
+
+/* ---------- 一時停止 ---------- */
+function setPause(p){
+  if (!B || B.over) return;
+  B.paused = p;
+  $('#pauseOv').classList.toggle('on', p);
+  if (p){
+    const box = $('#ovRelics');
+    box.innerHTML = run.relics.map(id => `<div class="pick static">${relicHTML(id)}</div>`).join('');
+    wrapJP(box);
+    snapBattle();
+  }
+}
+$('#btnPause').addEventListener('click', () => setPause(true));
+$('#btnResume').addEventListener('click', () => setPause(false));
+// 戦闘中にタイトルへ：その場で保存して戻る（「つづきから」で同じ所から再開）
+$('#btnQuitBattle').addEventListener('click', () => {
+  snapBattle();
+  if (B) B.over = true;
+  B = null;
+  $('#pauseOv').classList.remove('on');
+  enterTitle();
+});
+// マップからタイトルへ：マップでは保存済みなのでそのまま戻る
+$('#btnMapTitle').addEventListener('click', () => { save(); enterTitle(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
+window.addEventListener('pagehide', () => snapBattle());
+
+$('#btnNew').addEventListener('click', () => {
+  if (loadSave().run && !confirmNew()) return;
+  newRun();
+});
+// 続きのデータがあるときは2回押しで上書き
+let newArmed = false;
+function confirmNew(){
+  if (newArmed) return true;
+  newArmed = true;
+  $('#btnNew').textContent = '本当に新しく始める？';
+  setTimeout(() => { newArmed = false; $('#btnNew').textContent = 'はじめる'; }, 2500);
+  return false;
+}
+$('#btnCont').addEventListener('click', () => {
+  const d = loadSave();
+  if (!d.run) return;
+  run = d.run;
+  const pd = run.pending;
+  if (pd && pd.won) return afterWin();          // 倒した直後に閉じた → 報酬から
+  if (pd && pd.lost) return gameOver();         // 負けた直後に閉じた → 結果から
+  if (pd && run.battle) return resumeBattle(run.battle);
+  if (pd) return startBattle(pd.foe);           // 途中保存の無い古いデータ
+  enterMap();
+});
+// 山札はどの画面からでも見られる。「もどる」で元の画面へ
+// 山札・お守りの一覧はどの画面からでも見られる。「もどる」で元の画面へ
+function openSide(fn){
+  if ($('#map').classList.contains('on')) return fn(enterMap);
+  if (ui.viewingDeck) return;
+  const back = ui.lastChooser;
+  fn(() => { ui.viewingDeck = false; chooser(back); });
+  ui.viewingDeck = true;
+}
+$('#btnDeck').addEventListener('click', () => openSide(showDeck));
+$('#btnRelics').addEventListener('click', () => openSide(showRelics));
+function showRelics(back){
+  chooser({ title:'お守り', sub:`持っているお守り ${run.relics.length}個`,
+    items: run.relics.map(id => ({ html:relicHTML(id), cls:'' })), btn:{ label:'もどる', on:back } });
+}
+function enterTitle(){
+  ui.titleInfo = false;
+  applyUnlocks();
+  const meta = loadMeta();
+  ui.asc = Math.min(ui.asc, meta.maxAsc);
+  $('#btnCont').style.display = loadSave().run ? '' : 'none';
+  $('#ascRow').style.display = meta.maxAsc > 0 ? '' : 'none';
+  renderAsc();
+  const n = unlockedCount(meta);
+  $('#titleMeta').innerHTML = meta.runs ? `最高得点 ${meta.best}　夜明け ${meta.wins}回<br>解放 ${n}/${UNLOCKS.length}` : '';
+  wrapJP($('#titleMeta'));
+  show('title');
+}
+/* ---------- タイトルの説明（遊び方・札の説明） ---------- */
+const HOWTO = [
+  ['開', '#2a3550', 'めくる', '札をタップすると開く。順番待ちはなし、どんどんめくれる。同時に開けるのは3枚まで（4枚目を開くと一番古い札が閉じる）。開いた札は約1秒で自然に閉じる。'],
+  ['揃', '#b8322a', 'そろえる', '開いている札に同じ札が2枚そろうと、その場で技が出る。札は地の色と薄い形の紋でも見分けられる。そろえた所には山札から次の札が入る。'],
+  ['連', '#c98a1a', '連と百鬼夜行', '続けてそろえると「連」が増えて技が強くなる（約2.6秒あくと切れる）。8連で「百鬼夜行」になり、4秒間は全部の札が見えて威力1.6倍。'],
+  ['輪', '#2c5aa0', '敵の動き', '盤面の上の帯：左が敵の次の行動と敵のHP、真ん中の輪が一周すると敵が動く、右が自分のHPと防御。防御は敵が動くと消えるので、攻撃の直前に「守」をそろえるのがコツ。'],
+  ['道', '#3c8a48', '夜道を進む', '敵を退散させると銭と札1組がもらえる。マップを下から上へ進む：戦（戦闘）・強（強敵、お守りがもらえる）・休（回復か札の強化）・店・？（できごと）・宝（お守り）。'],
+  ['主', '#c4412b', '幕の主と夜明け', '各幕の一番上に「幕の主」が待つ。祓うと次の幕へ。三幕を越えると夜明け。夜明けを迎えるたびに、もっと深い夜（闇）に挑める。'],
+  ['巡', '#6a5aa8', 'くり返し遊ぶ', '力尽きても、進んだ分だけ経験がたまり、新しい札やお守りが解放される。周回は自動で保存され、「つづきから」で戦闘の途中からでも再開できる。'],
+];
+function showHowto(){
+  chooser({ info:true, title:'遊び方', sub:'',
+    items: HOWTO.map(([g, col, n, d]) => ({ html:`<div class="mini info" style="--k:${col}"><span class="mk">${g}</span></div><div><div class="nm">${n}</div><div class="ds">${d}</div></div>` })),
+    btn:{ label:'もどる', on:enterTitle } });
+}
+function showCardGuide(){
+  const unlocked = new Set(['zan', 'mamo', ...POOL]);
+  const keys = Object.keys(SK).filter(k => k !== 'noroi').sort((a, b) => SK[a].r - SK[b].r).concat('noroi');
+  chooser({ info:true, title:'札の説明', sub:'同じ札を2枚そろえると、その場で技が出る',
+    items: keys.map(k => {
+      const sk = SK[k];
+      const tag = k === 'noroi' ? '邪魔札' : RAR_NAME[sk.r];
+      const up = k === 'noroi' ? '' : `<br>強化すると：${upgradeDiff(k)}`;
+      const lock = unlocked.has(k) || k === 'noroi' ? '' : '<br><em>まだ出てこない（周回を重ねると解放）</em>';
+      return { html:`<div class="mini" style="--k:${sk.col}">${monSVG(k)}<span class="mk">${sk.n}</span></div>`
+        + `<div><div class="nm">${sk.n}　<small>${tag}</small></div><div class="ds">${sk.d(0)}${up}${lock}</div></div>` };
+    }),
+    btn:{ label:'もどる', on:enterTitle } });
+}
+$('#btnHow').addEventListener('click', showHowto);
+document.querySelectorAll('.sndbtn').forEach(b => b.addEventListener('click', () => { setSound(!SFX.on); if (SFX.on) sfx('ui'); }));
+document.querySelectorAll('.bgmbtn').forEach(b => b.addEventListener('click', () => setBgm(!BGM.on)));
+renderSoundBtns();
+$('#btnCards').addEventListener('click', showCardGuide);
+function renderAsc(){
+  $('#ascNum').textContent = ui.asc ? `闇 ${ui.asc}` : '宵の口';
+  $('#ascDesc').textContent = ui.asc ? ASC.slice(1, ui.asc + 1).join('／') : 'ふつうの難しさ（夜明けを迎えるたびに夜が深くなる）';
+  wrapJP($('#ascDesc'));
+}
+$('#ascDn').addEventListener('click', () => { ui.asc = Math.max(0, ui.asc - 1); renderAsc(); });
+$('#ascUp').addEventListener('click', () => { ui.asc = Math.min(loadMeta().maxAsc, ui.asc + 1); renderAsc(); });
+// 最初から書いてある説明文にも目印を入れる
+document.querySelectorAll('.title-note, .logo-sub, .ovnote').forEach(wrapJP);
+enterTitle();
+document.addEventListener('dblclick', e => e.preventDefault());
+document.addEventListener('gesturestart', e => e.preventDefault());
+window.HYAKKI = { get run(){ return run; }, get B(){ return B; }, DEBUG }; // デバッグ用
+</script>
+</body>
+</html>
