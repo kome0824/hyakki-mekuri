@@ -3145,15 +3145,31 @@ function shareRow(label){
     + `</div></div>`;
 }
 const shareText = () => ui.share + '\n#百鬼めくり';
-async function copyShare(msg){
-  try { await navigator.clipboard.writeText(shareText() + '\n' + SHARE_URL); toast(msg); return true; } catch(e){ return false; }
+// その場で（同期で）コピーする。すぐ別のアプリに切り替わっても、コピーは先に終わっている
+function copyNow(){
+  const text = shareText() + '\n' + SHARE_URL;
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.readOnly = true;   // スマホでキーボードを出さない
+  ta.style.cssText = 'position:fixed;left:-9999px;top:0;font-size:16px;user-select:text;-webkit-user-select:text';
+  document.body.appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch(e){}
+  ta.remove();
+  if (!ok) try { navigator.clipboard.writeText(text).catch(() => {}); ok = true; } catch(e){}
+  return ok;
 }
 function shareNow(b){
   const k = b.dataset.share;
-  if (k === 'copy'){ copyShare('結果をコピーしました。貼り付けてシェアできます').then(ok => { if (!ok) toast('コピーできませんでした'); }); return; }
+  if (k === 'copy'){ toast(copyNow() ? '結果をコピーしました。貼り付けてシェアできます' : 'コピーできませんでした'); return; }
   const s = SNS.find(x => x[0] === k);
   if (!s) return;
-  if (k === 'discord') copyShare('文章をコピーしました。Discordに貼り付けてください');   // 開く前にコピー（押した直後でないとコピーできない）
+  if (k === 'discord'){
+    // 先にコピーしてから Discord を開く。文章はコピー済みなので貼り付けて送る
+    toast(copyNow() ? 'コピーしました。Discordに貼り付けてください' : 'コピーできませんでした。「コピー」をお試しください');
+  }
   b.href = s[3](encodeURIComponent(shareText()), encodeURIComponent(SHARE_URL));   // このあとリンクとして開く
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-share]'); if (b){ sfx('ui'); shareNow(b); } });
