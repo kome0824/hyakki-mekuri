@@ -62,8 +62,16 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .vol label span{flex:none;width:calc(var(--u)*11);white-space:nowrap}
 .vol input{flex:none;width:calc(var(--u)*38);accent-color:var(--kin)}
 .vol b{flex:none;width:calc(var(--u)*9);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--sub)}
-.title-links{position:absolute;left:0;right:0;bottom:calc(var(--u)*7);display:flex;justify-content:center;gap:calc(var(--u)*3)}
-.title-links .btn{min-width:calc(var(--u)*26.5);padding:calc(var(--u)*2.2) calc(var(--u)*3);font-size:calc(var(--u)*3.8)}
+.title-links{position:absolute;left:0;right:0;bottom:calc(var(--u)*7);display:flex;justify-content:center;gap:calc(var(--u)*2.4)}
+.title-links .btn{min-width:calc(var(--u)*27);padding:calc(var(--u)*2.2) calc(var(--u)*2);font-size:calc(var(--u)*3.8)}
+.endbtn{padding:calc(var(--u)*2.2) calc(var(--u)*5);font-size:calc(var(--u)*4.4)}
+.endbtn small{display:block;font-size:.62em;color:var(--sub);letter-spacing:.1em;margin-top:calc(var(--u)*.4)}
+.sharebtn{margin:calc(var(--u)*1.6) auto 0;min-width:calc(var(--u)*50);padding:calc(var(--u)*2.4) calc(var(--u)*4);font-size:calc(var(--u)*4.2)}
+.rec-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:calc(var(--u)*1.6);width:calc(var(--u)*88)}
+.rec-grid div{padding:calc(var(--u)*2) calc(var(--u)*2);border-radius:calc(var(--u)*1);background:var(--panel);border:1px solid var(--line);text-align:center}
+.rec-grid b{display:block;font-size:calc(var(--u)*5);color:var(--paper);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rec-grid span{font-size:calc(var(--u)*3);color:var(--sub)}
+.rec-grid .wide{grid-column:1/-1}
 .mini.info{font-family:var(--mincho)}
 .title-meta{color:var(--sub);font-size:calc(var(--u)*3.3);text-align:center;line-height:1.6}
 .asc{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*1.2);width:calc(var(--u)*84)}
@@ -416,6 +424,7 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
     <div class="logo">百鬼めくり</div>
     <div class="logo-sub">めくって、そろえて、百鬼を祓え。</div>
     <button class="btn" id="btnNew">はじめる</button>
+    <button class="btn sub endbtn" id="btnEndless">果てなき夜<small>エンドレス</small></button>
     <button class="btn sub" id="btnCont" style="display:none">つづきから</button>
     <div class="asc" id="ascRow" style="display:none">
       <div class="ascsel"><button id="ascDn">◀</button><b id="ascNum"></b><button id="ascUp">▶</button></div>
@@ -424,7 +433,7 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
     <div class="title-meta" id="titleMeta"></div>
     <div class="title-note">札をどんどんめくれ<br>同じ絵柄が2枚開いたら即発動<br>妖怪は待ってくれない</div>
     <!-- 説明は画面の下段に（「はじめる」「つづきから」の近くに置かない） -->
-    <div class="title-links"><button class="btn sub" id="btnHow">遊び方</button><button class="btn sub" id="btnCards">札の説明</button></div>
+    <div class="title-links"><button class="btn sub" id="btnHow">遊び方</button><button class="btn sub" id="btnCards">札の説明</button><button class="btn sub" id="btnRec">記録</button></div>
   </section>
 
   <section id="battle" class="screen">
@@ -613,6 +622,9 @@ const ASC = [
   '幕の主の攻撃 +20%',
 ];
 const asc = n => !!run && run.asc >= n;
+// 幕の中身（果てなき夜では第4幕から第1〜3幕の顔ぶれをくり返し、周ごとに強くなる）
+const actDef = a => ACTS[(a - 1) % ACTS.length];
+const actLoop = a => Math.floor((a - 1) / ACTS.length);
 
 /* ---------- 解放 ----------
    周回が終わるたびに「経験」（到達階＋幕の主を祓った数×10）がたまり、12ごとに1つ解放 */
@@ -621,7 +633,7 @@ const UNLOCKS = [
   ['card','baku'], ['relic','kyoran'], ['card','zen'], ['relic','onime'], ['card','rai'], ['relic','fukutsu'],
 ];
 const UNLOCK_STEP = 12;
-function loadMeta(){ const m = loadSave().meta || {}; return Object.assign({ best:0, runs:0, wins:0, pts:0, maxAsc:0 }, m); }
+function loadMeta(){ const m = loadSave().meta || {}; return Object.assign({ best:0, runs:0, wins:0, pts:0, maxAsc:0, hist:[], endBest:null, bestCombo:0 }, m); }
 function unlockedCount(meta){ return Math.min(UNLOCKS.length, Math.floor(meta.pts / UNLOCK_STEP)); }
 function applyUnlocks(){
   const n = unlockedCount(loadMeta());
@@ -662,12 +674,12 @@ const show = id => {
   }
 };
 
-function newRun(){
+function newRun(endless){
   const seed = randomSeed();
   const hp = ui.asc >= 6 ? 54 : PLAYER_HP;
   run = { v:1, seed, asc:ui.asc, hp, maxHp:hp, gold:0, floor:0, act:1, deck:[], relics:['chishio'],
           rs:hashStr(seed + '|run'), at:-1, path:[], removes:0, lastFoe:null, pending:null, shop:null, bosses:0,
-          stats:{ taps:0, matches:0, misses:0, maxCombo:0, fevers:0, ms:0, battles:0 } };
+          stats:{ taps:0, matches:0, misses:0, maxCombo:0, fevers:0, ms:0, battles:0 }, endless:!!endless };
   STARTER.forEach(([k, n]) => { for (let i = 0; i < n; i++) run.deck.push({ k, u:0 }); });
   if (asc(7)) run.deck.push({ k:'noroi', u:0 });
   run.map = genMap(1);
@@ -692,6 +704,8 @@ function startBattle(foeId){
   if (asc(4)) atkMul *= 1.15;
   if (asc(8)) ivMul *= 0.95;
   if (kind === 'boss' && asc(10)){ atkMul *= 1.2; if (run.act === 3) hpMul *= 1.15; }
+  const loop = run.endless ? actLoop(run.act) : 0;   // 果てなき夜：一周するごとに敵が強くなる
+  if (loop){ hpMul *= 1 + .45 * loop; atkMul *= 1 + .25 * loop; ivMul *= Math.max(.7, 1 - .05 * loop); }
   const maxHp = Math.round(f.hp * hpMul);
   const rng = makeRng(hashStr(run.seed + '|battle|' + run.floor));
   const cards = [];
@@ -2467,7 +2481,7 @@ function enterMap(){
 function renderMapHead(){
   $('#mHp').textContent = `HP ${run.hp}/${run.maxHp}`;
   $('#mGold').textContent = run.gold;
-  $('#mAct').textContent = `第${run.act}幕` + (run.asc ? ` 闇${run.asc}` : '');
+  $('#mAct').textContent = (run.endless ? '果て ' : '') + `第${run.act}幕` + (run.asc ? ` 闇${run.asc}` : '');
   $('#mDeck').textContent = `山札 ${run.deck.length}組`;
   renderRelicRow($('#mRelics'));
 }
@@ -2498,7 +2512,7 @@ function enterNode(n){
   run.at = n.id;
   run.path.push(n.id);
   run.floor++;
-  const act = ACTS[run.act - 1];
+  const act = actDef(run.act);
   const { r, done } = rrng();
   let foe = null;
   if (n.type === 'fight'){
@@ -2555,6 +2569,7 @@ function chooser(args){
 function afterWin(){
   const kind = run.pending ? run.pending.kind : 'fight';
   run.pending = null;
+  if (kind === 'boss' && !run.endless && run.act >= ACTS.length) return actClear();   // 最後の幕の主：報酬なしで夜明けへ
   if (hasR('chishio')) heal(6);
   const base = kind === 'boss' ? 70 : kind === 'elite' ? 32 : 14;
   const { r, done } = rrng();
@@ -2578,7 +2593,7 @@ function bossRelicPick(){
 }
 function actClear(){
   run.bosses++;
-  if (run.act >= ACTS.length) return endRun(true);
+  if (!run.endless && run.act >= ACTS.length) return endRun(true);
   run.act++;
   run.map = genMap(run.act);
   run.at = -1;
@@ -2586,7 +2601,8 @@ function actClear(){
   const h = Math.round(run.maxHp * 0.5);
   heal(h);
   save();
-  chooser({ title:`第${run.act - 1}幕を越えた`, sub:`ひと息ついた。HP ${h} 回復<br>次は第${run.act}幕`, items:[], btn:{ label:'すすむ', on:enterMap } });
+  const next = run.endless && run.act > ACTS.length && (run.act - 1) % ACTS.length === 0 ? '<br>夜はまだ明けない。妖怪たちが強くなった' : '';
+  chooser({ title:`第${run.act - 1}幕を越えた`, sub:`ひと息ついた。HP ${h} 回復<br>次は第${run.act}幕${next}`, items:[], btn:{ label:'すすむ', on:enterMap } });
 }
 function gameOver(){ endRun(false); }
 
@@ -2617,6 +2633,7 @@ function endRun(win){
   const r = run;
   const S = r.stats;
   const score = r.floor * 10 + r.bosses * 100 + (win ? 500 : 0) + r.asc * 50;
+  const dg0 = mekuriHeat(S);
   const d = loadSave();
   const meta = loadMeta();
   const before = unlockedCount(meta);
@@ -2626,6 +2643,12 @@ function endRun(win){
   meta.best = Math.max(meta.best, score);
   meta.pts += r.floor + r.bosses * 10;
   const after = unlockedCount(meta);
+  // 記録：直近30回と、果てなき夜の最高到達・最大連続
+  meta.hist.unshift({ d:Date.now(), e:r.endless ? 1 : 0, asc:r.asc, act:r.act, floor:r.floor, win:win ? 1 : 0, score, combo:S.maxCombo, deg:dg0.deg });
+  meta.hist = meta.hist.slice(0, 30);
+  meta.bestCombo = Math.max(meta.bestCombo, S.maxCombo);
+  const prevEnd = meta.endBest;
+  if (r.endless && (!prevEnd || r.floor > prevEnd.floor)) meta.endBest = { act:r.act, floor:r.floor, score, asc:r.asc };
   d.meta = meta;
   d.run = null;
   writeSave(d);
@@ -2642,7 +2665,7 @@ function endRun(win){
   const cell = (v, label, cls) => `<div class="rc${cls ? ' ' + cls : ''}"><b>${v}</b><span>${label}</span></div>`;
   const html = `
     <div class="res">
-      <div class="res-reach">${win ? '三幕を越え、夜が明けた' : `第${r.act}幕 ${r.floor}階で力尽きた`}${r.asc ? `<em>闇${r.asc}</em>` : ''}</div>
+      <div class="res-reach">${win ? '三幕を越え、夜が明けた' : `${r.endless ? '果てなき夜 ' : ''}第${r.act}幕 ${r.floor}階で力尽きた`}${r.asc ? `<em>闇${r.asc}</em>` : ''}</div>
       <div class="res-heat">
         <div class="hl">めくり熱</div>
         <div class="hd">${dg.deg}<small>℃</small></div>
@@ -2655,9 +2678,12 @@ function endRun(win){
         ${cell(S.maxCombo, '最大連続')}${cell(S.fevers, '百鬼夜行')}${cell(`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`, '戦闘時間')}
       </div>
       ${win && meta.maxAsc > r.asc ? `<div class="res-note">闇${r.asc + 1} に挑めるようになった</div>` : ''}
+      ${r.endless && meta.endBest && meta.endBest.floor === r.floor && (!prevEnd || prevEnd.floor < r.floor) ? `<div class="res-note">果てなき夜の新記録</div>` : ''}
+      <button class="btn sub sharebtn" data-share="1">結果をシェア</button>
       <div class="res-sec">${items.length ? '新しく解放' : (after < UNLOCKS.length ? `次の解放まで あと${UNLOCK_STEP - meta.pts % UNLOCK_STEP}` : 'すべて解放済み')}</div>
     </div>`;
-  chooser({ title: win ? '夜明け' : '力尽きた…', sub: html, items, btn:{ label:'タイトルへ', on:enterTitle }, guard:!win });
+  ui.share = `百鬼めくりで${win ? '三幕を越えて夜明けを迎えた！' : `${r.endless ? '果てなき夜の' : ''}第${r.act}幕 ${r.floor}階まで進んだ`}${r.asc ? `（闇${r.asc}）` : ''}\n得点${score}・最大${S.maxCombo}連・めくり熱${dg.deg}℃「${dg.name}」`;
+  chooser({ title: win ? '夜明け' : '力尽きた…', sub: html, items, btn:{ label:'タイトルへ', on:enterTitle }, guard:true });
 }
 
 /* ---------- 休憩 ---------- */
@@ -2799,16 +2825,21 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) setPa
 window.addEventListener('pagehide', () => snapBattle());
 
 $('#btnNew').addEventListener('click', () => {
-  if (loadSave().run && !confirmNew()) return;
-  newRun();
+  if (loadSave().run && !confirmNew('#btnNew')) return;
+  newRun(false);
+});
+$('#btnEndless').addEventListener('click', () => {
+  if (loadSave().run && !confirmNew('#btnEndless')) return;
+  newRun(true);
 });
 // 続きのデータがあるときは2回押しで上書き
-let newArmed = false;
-function confirmNew(){
-  if (newArmed) return true;
-  newArmed = true;
-  $('#btnNew').textContent = '本当に新しく始める？';
-  setTimeout(() => { newArmed = false; $('#btnNew').textContent = 'はじめる'; }, 2500);
+let newArmed = null;
+function confirmNew(id){
+  if (newArmed === id) return true;
+  newArmed = id;
+  const el = $(id), html = el.innerHTML;
+  el.textContent = '本当に新しく始める？';
+  setTimeout(() => { if (newArmed === id) newArmed = null; el.innerHTML = html; }, 2500);
   return false;
 }
 $('#btnCont').addEventListener('click', () => {
@@ -2843,6 +2874,7 @@ function enterTitle(){
   const meta = loadMeta();
   ui.asc = Math.min(ui.asc, meta.maxAsc);
   $('#btnCont').style.display = loadSave().run ? '' : 'none';
+  if (newArmed){ newArmed = null; $('#btnNew').textContent = 'はじめる'; $('#btnEndless').innerHTML = '果てなき夜<small>エンドレス</small>'; }
   $('#ascRow').style.display = meta.maxAsc > 0 ? '' : 'none';
   renderAsc();
   const n = unlockedCount(meta);
@@ -2850,6 +2882,37 @@ function enterTitle(){
   wrapJP($('#titleMeta'));
   show('title');
 }
+/* ---------- 記録 ---------- */
+function fmtDate(t){ const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; }
+function showRecords(){
+  const m = loadMeta(), eb = m.endBest;
+  const cell = (v, l, cls) => `<div${cls ? ` class="${cls}"` : ''}><b>${v}</b><span>${l}</span></div>`;
+  const sub = `<div class="rec-grid">
+      ${cell(m.runs, '遊んだ回数')}${cell(m.wins, '夜明け')}
+      ${cell(m.best, '最高得点')}${cell(m.bestCombo, '最大連続')}
+      ${cell(m.maxAsc ? `闇${m.maxAsc}` : '宵の口', '挑める難しさ')}${cell(`${unlockedCount(m)}/${UNLOCKS.length}`, '解放')}
+      ${cell(eb ? `第${eb.act}幕 ${eb.floor}階` : '―', '果てなき夜の最高到達', 'wide')}
+    </div>
+    ${m.runs ? '<button class="btn sub sharebtn" data-share="1">記録をシェア</button>' : ''}
+    <div class="res-sec">${m.hist.length ? '最近の記録' : 'まだ記録がありません'}</div>`;
+  ui.share = `百鬼めくりの記録：夜明け${m.wins}回・最高得点${m.best}・最大${m.bestCombo}連${eb ? `・果てなき夜 第${eb.act}幕${eb.floor}階` : ''}`;
+  chooser({ info:true, title:'記録', sub,
+    items: m.hist.map(h => ({ html:`<div class="mini info" style="--k:${h.win ? '#c9a14a' : h.e ? '#6a5aa8' : '#4a4658'}"><span class="mk">${h.win ? '明' : h.e ? '果' : '倒'}</span></div>`
+      + `<div><div class="nm">${h.win ? '夜明け' : `${h.e ? '果てなき夜 ' : ''}第${h.act}幕 ${h.floor}階`}${h.asc ? `　<small>闇${h.asc}</small>` : ''}</div>`
+      + `<div class="ds">${fmtDate(h.d)}　得点${h.score}・最大${h.combo}連・${h.deg}℃</div></div>` })),
+    btn:{ label:'もどる', on:enterTitle } });
+}
+$('#btnRec').addEventListener('click', showRecords);
+// シェア：使えれば端末の共有メニュー、だめならコピー、それもだめなら X の投稿画面
+const SHARE_URL = 'https://kome0824.github.io/hyakki-mekuri/';
+async function shareNow(){
+  const text = ui.share + '\n#百鬼めくり';
+  try { if (navigator.share){ await navigator.share({ title:'百鬼めくり', text, url:SHARE_URL }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(text + '\n' + SHARE_URL); toast('結果をコピーしました。貼り付けてシェアできます'); return; } catch(e){}
+  window.open('https://x.com/intent/post?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(SHARE_URL), '_blank');
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-share]')) shareNow(); });
+
 /* ---------- タイトルの説明（遊び方・札の説明） ---------- */
 const HOWTO = [
   ['開', '#2a3550', 'めくる', '札をタップすると開く。順番待ちはなし、どんどんめくれる。同時に開けるのは3枚まで（4枚目を開くと一番古い札が閉じる）。開いた札は約1秒で自然に閉じる。'],
