@@ -827,7 +827,6 @@ function startBattle(foeId){
     queue:[],
   };
   for (let i = 0; i < SLOTS; i++) dealTo(i);
-  if (hasR('sakiyomi')) B.slots.forEach(sl => { if (sl) sl.peekUntil = 1500; });
   dexNote('f', foeId);
   showBattle();
   log(`${f.n} があらわれた！`);
@@ -842,7 +841,12 @@ function battleIntro(kind){
   d.className = 'startov';
   d.innerHTML = `<span>${kind === 'boss' ? '幕の主　' : kind === 'elite' ? '強敵　' : ''}${B.f.n} があらわれた</span><b>勝負！</b>`;
   $('#board').appendChild(d);
-  setTimeout(() => d.remove(), INTRO_MS);
+  const my = B;
+  setTimeout(() => {
+    d.remove();
+    // 先読み：「勝負！」の間は伏せたまま。消えてから1.5秒見せる（止まっている間は効果の時間に入らないため）
+    if (B === my && !B.over && hasR('sakiyomi')) B.slots.forEach((sl, i) => { if (sl && sl.st === 'down'){ sl.peekUntil = B.t + 1500; renderSlot(i); } });
+  }, INTRO_MS);
   sfx('foe');
 }
 const inIntro = () => !!B && B.introUntil > performance.now();
