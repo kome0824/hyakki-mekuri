@@ -52,8 +52,15 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .logo-sub{font-family:var(--mincho);color:var(--kin);font-size:calc(var(--u)*3.8);letter-spacing:.12em}
 .title-note{color:var(--sub);font-size:calc(var(--u)*3.4);text-align:center;line-height:1.7;font-weight:500}
 
-#sndRow{position:absolute;right:calc(var(--u)*3);top:calc(var(--u)*3);display:flex;gap:calc(var(--u)*1.6)}
-.sndrow2{display:flex;gap:calc(var(--u)*2)}
+#btnVol{position:absolute;right:calc(var(--u)*3);top:calc(var(--u)*3);z-index:3}
+.volpanel{position:absolute;right:calc(var(--u)*3);top:calc(var(--u)*11);z-index:3;display:none;padding:calc(var(--u)*3) calc(var(--u)*4);
+  border-radius:calc(var(--u)*1.2);background:var(--panel);border:1px solid var(--line)}
+.volpanel.on{display:block}
+.vol{display:flex;flex-direction:column;gap:calc(var(--u)*2.4)}
+.vol label{display:flex;align-items:center;gap:calc(var(--u)*2.4);font-size:calc(var(--u)*3.6)}
+.vol label span{width:calc(var(--u)*11)}
+.vol input{width:calc(var(--u)*40);accent-color:var(--kin)}
+.vol b{width:calc(var(--u)*7);text-align:right;font-variant-numeric:tabular-nums;color:var(--sub)}
 .title-links{position:absolute;left:0;right:0;bottom:calc(var(--u)*7);display:flex;justify-content:center;gap:calc(var(--u)*3)}
 .title-links .btn{min-width:calc(var(--u)*26.5);padding:calc(var(--u)*2.2) calc(var(--u)*3);font-size:calc(var(--u)*3.8)}
 .mini.info{font-family:var(--mincho)}
@@ -403,7 +410,8 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
   <div class="hurtfx" id="hurtfx"></div>
 
   <section id="title" class="screen on">
-    <div class="sndrow" id="sndRow"><button class="pausebtn bgmbtn" id="btnBgm">BGM あり</button><button class="pausebtn sndbtn" id="btnSnd">効果音 あり</button></div>
+    <button class="pausebtn" id="btnVol">音量</button>
+    <div class="volpanel" id="volPanel"><div class="vol"><label><span>BGM</span><input type="range" min="0" max="100" step="5" class="volBgm"><b class="volBgmN"></b></label><label><span>効果音</span><input type="range" min="0" max="100" step="5" class="volSe"><b class="volSeN"></b></label></div></div>
     <div class="logo">百鬼めくり</div>
     <div class="logo-sub">めくって、そろえて、百鬼を祓え。</div>
     <button class="btn" id="btnNew">はじめる</button>
@@ -452,7 +460,7 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
       <h2>一時停止</h2>
       <button class="btn" id="btnResume">つづける</button>
       <button class="btn sub" id="btnQuitBattle">タイトルへ</button>
-      <div class="sndrow2"><button class="pausebtn bgmbtn" id="btnBgmPause">BGM あり</button><button class="pausebtn sndbtn" id="btnSndPause">効果音 あり</button></div>
+      <div class="vol"><label><span>BGM</span><input type="range" min="0" max="100" step="5" class="volBgm"><b class="volBgmN"></b></label><label><span>効果音</span><input type="range" min="0" max="100" step="5" class="volSe"><b class="volSeN"></b></label></div>
       <div class="ovnote">タイトルに戻っても、「つづきから」でこの戦闘の今の状態から再開できます</div>
       <div class="ovrel"><div class="ovrel-t">持っているお守り</div><div class="ovrel-list" id="ovRelics"></div></div>
     </div>
@@ -1000,7 +1008,7 @@ const SND = {
   },
   lose(c, o, t){ tone(c, o, t, { f:220, f2:55, type:'sawtooth', d:1.3, v:.16, lp:700 }); tone(c, o, t + .1, { f:233, f2:58, type:'sawtooth', d:1.2, v:.1, lp:600 }); },
   // ボタン
-  ui(c, o, t){ hiss(c, o, t, { f:3200, q:5, d:.03, v:.2 }); },
+  ui(c, o, t){ hiss(c, o, t, { f:2400, q:4, d:.04, v:.32 }); tone(c, o, t, { f:1150, f2:900, type:'triangle', d:.045, v:.1 }); },
 };
 function sfxInit(){
   if (SFX.ctx){ if (SFX.ctx.state === 'suspended') SFX.ctx.resume(); return; }
@@ -1011,7 +1019,7 @@ function sfxInit(){
     // 効果音は控えめの音量でまとめ、BGMと一緒にコンプレッサーを通す
     const comp = SFX.ctx.createDynamicsCompressor(), g = SFX.ctx.createGain(), se = SFX.ctx.createGain();
     comp.threshold.value = -14; comp.ratio.value = 4;
-    g.gain.value = .85; se.gain.value = .5;
+    g.gain.value = .85; se.gain.value = seLevel();
     se.connect(comp); comp.connect(g); g.connect(SFX.ctx.destination);
     SFX.out = se; SFX.master = comp;
   } catch(e){ SFX.ctx = null; }
@@ -1024,7 +1032,7 @@ function sfx(name, arg){
 // 最初に画面に触れたときに音を使えるようにする（ブラウザの決まり）
 document.addEventListener('pointerdown', sfxInit, true);
 // ボタンを押した音（盤面の札は別の音）
-document.addEventListener('click', e => { if (e.target.closest('button')) sfx('ui'); }, true);
+document.addEventListener('pointerdown', e => { if (!e.target.closest('.slot, input')) sfx('ui'); }, true);
 /* ---------- BGM ----------
    効果音と同じく Web Audio で合成（オリジナル曲）。テンションの上がるロック／テクノ寄り：
    ドラム（キック・スネア・ハット）、8分で刻むベース、和音の伴奏、琴っぽい16分のアルペジオ、歌うリード。
@@ -1141,10 +1149,10 @@ function bgmStep(c, o, t, i, s16, song, fever){
 }
 // 決着のジングル（勝ち＝短いファンファーレ、負け＝ゆっくり下がる2小節）。鳴り終わるまで次の曲は待たせる
 const JINGLES = {
-  win:{ bpm:150, start:.25, len:32, mel:parseMel('D6:2 F#6:2 A6:4 G6:2 B6:2 A6:2 C#7:2 D7:12 r:4'),
-    ch:[[0, 'D', 8], [8, 'G', 4], [12, 'A', 4], [16, 'D', 14]], kick:[0, 4, 8, 12, 16], roll:[12, 16], crash:[0, 16] },
-  lose:{ bpm:90, start:.1, len:32, mel:parseMel('E5:4 D5:4 C5:4 B4:4 A4:14 r:2'),
-    ch:[[0, 'Am', 8], [8, 'Dm', 8], [16, 'Am', 16]], kick:[0, 16], roll:null, crash:[] },
+  win:{ bpm:160, start:.2, len:16, mel:parseMel('A5:2 C#6:2 E6:2 F#6:10'),
+    ch:[[0, 'A', 6], [6, 'D', 10]], kick:[0, 6], roll:[2, 6], crash:[6] },
+  lose:{ bpm:100, start:.1, len:16, mel:parseMel('E5:3 C5:3 A4:10'),
+    ch:[[0, 'Dm', 6], [6, 'Am', 10]], kick:[0, 6], roll:null, crash:[] },
 };
 function bgmFadeOut(){
   const c = SFX.ctx, g = BGM.gain;
@@ -1158,7 +1166,7 @@ function bgmFadeOut(){
 function bgmNewGain(fadeIn){
   const c = SFX.ctx, g = c.createGain();
   g.gain.setValueAtTime(0.0001, c.currentTime);
-  g.gain.exponentialRampToValueAtTime(BGM.on ? BGM_VOL : 0.0001, c.currentTime + fadeIn);
+  g.gain.exponentialRampToValueAtTime(bgmLevel(), c.currentTime + fadeIn);
   g.connect(SFX.master);
   return g;
 }
@@ -1215,21 +1223,38 @@ function bgmTick(){
   }
 }
 setInterval(bgmTick, 40);
-function setBgm(on){
-  BGM.on = on;
-  try { localStorage.setItem(BGM_KEY, on ? 'on' : 'off'); } catch(e){}
-  if (BGM.gain && SFX.ctx){ BGM.gain.gain.cancelScheduledValues(SFX.ctx.currentTime); BGM.gain.gain.setValueAtTime(on ? BGM_VOL : 0.0001, SFX.ctx.currentTime + .05); }
-  renderSoundBtns();
+/* ---------- 音量 ----------
+   BGM・効果音それぞれ 0〜100。0 で鳴らさない。最初は 80（この端末に保存）。
+   以前の「あり／なし」の設定が「なし」なら 0 から始める */
+const VOL_KEY = 'hyakki-mekuri.vol';
+const VOL = { bgm:80, se:80 };
+try {
+  const v = JSON.parse(localStorage.getItem(VOL_KEY) || 'null');
+  if (v) Object.assign(VOL, v);
+  else { if (localStorage.getItem(SND_KEY) === 'off') VOL.se = 0; if (localStorage.getItem(BGM_KEY) === 'off') VOL.bgm = 0; }
+} catch(e){}
+function seLevel(){ return .75 * VOL.se / 80; }
+function bgmLevel(){ return Math.max(.0001, BGM_VOL * VOL.bgm / 80); }
+function applyVol(){
+  SFX.on = VOL.se > 0; BGM.on = VOL.bgm > 0;
+  const c = SFX.ctx;
+  if (!c) return;
+  if (SFX.out){ SFX.out.gain.cancelScheduledValues(c.currentTime); SFX.out.gain.setTargetAtTime(seLevel(), c.currentTime, .03); }
+  if (BGM.gain){ BGM.gain.gain.cancelScheduledValues(c.currentTime); BGM.gain.gain.setTargetAtTime(bgmLevel(), c.currentTime, .05); }
 }
-function setSound(on){
-  SFX.on = on;
-  try { localStorage.setItem(SND_KEY, on ? 'on' : 'off'); } catch(e){}
-  renderSoundBtns();
+function setVol(kind, v){
+  VOL[kind] = v;
+  try { localStorage.setItem(VOL_KEY, JSON.stringify(VOL)); } catch(e){}
+  applyVol();
+  renderVol();
 }
-function renderSoundBtns(){
-  document.querySelectorAll('.sndbtn').forEach(b => b.textContent = SFX.on ? '効果音 あり' : '効果音 なし');
-  document.querySelectorAll('.bgmbtn').forEach(b => b.textContent = BGM.on ? 'BGM あり' : 'BGM なし');
+function renderVol(){
+  document.querySelectorAll('.volBgm').forEach(x => x.value = VOL.bgm);
+  document.querySelectorAll('.volSe').forEach(x => x.value = VOL.se);
+  document.querySelectorAll('.volBgmN').forEach(x => x.textContent = VOL.bgm);
+  document.querySelectorAll('.volSeN').forEach(x => x.textContent = VOL.se);
 }
+applyVol();
 
 /* ---------- 演出 ---------- */
 function pulse(el, cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
@@ -2422,6 +2447,9 @@ function enterNode(n){
 /* ---------- 汎用の選択画面 ---------- */
 function chooser(args){
   const { title, sub, items, btn, guard } = args;
+  // 同じ画面の描き直し（店で買ったときなど）はスクロール位置をそのまま
+  const same = $('#choose').classList.contains('on') && ui.lastChooser && ui.lastChooser.title === title;
+  const keep = same ? $('#cItems').scrollTop : 0;
   ui.lastChooser = args;
   ui.titleInfo = !!args.info;   // タイトルから開いた説明の画面
   $('#cTitle').textContent = title;
@@ -2443,7 +2471,7 @@ function chooser(args){
   wrapJP(box);
   show('choose');
   if (guard) guardScreen('choose');   // 誤タップ防止は戦闘の直後だけ（連打の勢いで報酬を選ばないように）
-  $('#cItems').scrollTop = 0;
+  $('#cItems').scrollTop = keep;
 }
 
 /* ---------- 戦闘の後 ---------- */
@@ -2775,9 +2803,14 @@ function showCardGuide(){
     btn:{ label:'もどる', on:enterTitle } });
 }
 $('#btnHow').addEventListener('click', showHowto);
-document.querySelectorAll('.sndbtn').forEach(b => b.addEventListener('click', () => { setSound(!SFX.on); if (SFX.on) sfx('ui'); }));
-document.querySelectorAll('.bgmbtn').forEach(b => b.addEventListener('click', () => setBgm(!BGM.on)));
-renderSoundBtns();
+$('#btnVol').addEventListener('click', () => $('#volPanel').classList.toggle('on'));
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#volPanel, #btnVol')) $('#volPanel').classList.remove('on'); });
+document.querySelectorAll('.volBgm').forEach(x => x.addEventListener('input', () => setVol('bgm', +x.value)));
+document.querySelectorAll('.volSe').forEach(x => {
+  x.addEventListener('input', () => setVol('se', +x.value));
+  x.addEventListener('change', () => sfx('match', 3));   // 離したときに今の大きさで1回鳴らす
+});
+renderVol();
 $('#btnCards').addEventListener('click', showCardGuide);
 function renderAsc(){
   $('#ascNum').textContent = ui.asc ? `闇 ${ui.asc}` : '宵の口';
