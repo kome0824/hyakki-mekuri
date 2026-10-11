@@ -460,6 +460,11 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
 .mini.dexfoe{background:#141620;border:1px solid var(--line);box-shadow:none;padding:calc(var(--u)*1)}
 .mini.dexfoe svg{display:block;width:100%;height:100%}
 #choose.norun{padding-top:calc(var(--u)*7)}
+/* ふだんは中身の一覧だけがスクロールする（cscroll は枠なし）。記録の画面は、題から一覧まで全体でスクロールし、下のボタンは動かない */
+#choose .cscroll{display:contents}
+#choose.scrollall .cscroll{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*2.4);flex:1;min-height:0;width:100%;
+  overflow-y:auto;overscroll-behavior:contain}
+#choose.scrollall .picks{flex:none;overflow:visible}
 .res{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*2.6);width:calc(var(--u)*90)}
 .res-reach{font-size:calc(var(--u)*3.8);color:var(--ink)}
 .res-reach em{font-style:normal;margin-left:calc(var(--u)*2);padding:0 calc(var(--u)*1.6);border:1px solid var(--shu);border-radius:calc(var(--u)*.6);color:var(--shu);font-size:.85em}
@@ -572,9 +577,11 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
   </section>
 
   <section id="choose" class="screen">
-    <h2 id="cTitle"></h2>
-    <div class="rsub" id="cSub"></div>
-    <div class="picks" id="cItems"></div>
+    <div class="cscroll" id="cScroll">
+      <h2 id="cTitle"></h2>
+      <div class="rsub" id="cSub"></div>
+      <div class="picks" id="cItems"></div>
+    </div>
     <button class="btn sub" id="cBtn"></button>
   </section>
 
@@ -2785,6 +2792,7 @@ function chooser(args){
   const same = $('#choose').classList.contains('on') && ui.lastChooser && ui.lastChooser.title === title;
   const keep = same ? $('#cItems').scrollTop : 0;
   ui.lastChooser = args;
+  $('#choose').classList.toggle('scrollall', !!args.scrollAll);
   ui.titleInfo = !!args.info;   // タイトルから開いた説明の画面
   $('#cTitle').textContent = title;
   $('#cSub').innerHTML = sub || '';
@@ -2806,6 +2814,7 @@ function chooser(args){
   show('choose');
   if (guard) guardScreen('choose');   // 誤タップ防止は戦闘の直後だけ（連打の勢いで報酬を選ばないように）
   $('#cItems').scrollTop = keep;
+  if (!same) $('#cScroll').scrollTop = 0;
 }
 
 /* ---------- 戦闘の後 ---------- */
@@ -3150,7 +3159,7 @@ function showRecords(){
     name: eb ? `果てなき夜 第${eb.act}幕 ${eb.floor}階` : m.hist.length ? `めくり熱 最高 ${Math.max(...m.hist.map(h => h.deg || 0))}℃` : '',
     note: eb ? '果てなき夜の最高到達' : m.hist.length ? `直近${m.hist.length}回の記録から` : '',
     stats:[[m.best, '最高得点'], [m.bestCombo, '最大連続'], [m.runs, '遊んだ回数'], [`${unlockedCount(m)}/${UNLOCKS.length}`, '解放']] });
-  chooser({ info:true, title:'記録', sub,
+  chooser({ info:true, scrollAll:true, title:'記録', sub,
     items: m.hist.map(h => ({ html:`<div class="mini info" style="--k:${h.win ? '#c9a14a' : h.e ? '#6a5aa8' : '#4a4658'}"><span class="mk">${h.win ? '明' : h.e ? '果' : '倒'}</span></div>`
       + `<div><div class="nm">${h.win ? '夜明け' : `${h.e ? '果てなき夜 ' : ''}第${h.act}幕 ${h.floor}階`}${h.asc ? `　<small>闇${h.asc}</small>` : ''}</div>`
       + `<div class="ds">${fmtDate(h.d)}　得点${h.score}・最大${h.combo}連・${h.deg}℃</div></div>` })),
