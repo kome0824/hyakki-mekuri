@@ -9,10 +9,10 @@
 <meta name="apple-mobile-web-app-title" content="百鬼めくり">
 <title>百鬼めくり</title>
 <!-- リンクを貼ったときのカード（X・Discord・LINE など）。画像は pv/ogp_make.js で作る -->
-<meta name="description" content="めくって、そろえて、百鬼を祓え。スマホのブラウザでそのまま遊べる札合わせローグライク。">
+<meta name="description" content="めくって、そろえて、物の怪を祓え。スマホのブラウザでそのまま遊べる札合わせローグライク。">
 <meta property="og:type" content="website">
 <meta property="og:title" content="百鬼めくり">
-<meta property="og:description" content="めくって、そろえて、百鬼を祓え。スマホのブラウザでそのまま遊べる札合わせローグライク。">
+<meta property="og:description" content="めくって、そろえて、物の怪を祓え。スマホのブラウザでそのまま遊べる札合わせローグライク。">
 <meta property="og:url" content="https://kome0824.github.io/hyakki-mekuri/">
 <meta property="og:image" content="https://kome0824.github.io/hyakki-mekuri/ogp.png">
 <meta property="og:image:width" content="1200">
@@ -508,7 +508,7 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
     </div>
     <div class="volpanel" id="volPanel"><div class="vol"><label><span>BGM</span><input type="range" min="0" max="100" step="5" class="volBgm"><b class="volBgmN"></b></label><label><span>効果音</span><input type="range" min="0" max="100" step="5" class="volSe"><b class="volSeN"></b></label></div></div>
     <div class="logo">百鬼めくり</div>
-    <div class="logo-sub">めくって、そろえて、百鬼を祓え。</div>
+    <div class="logo-sub">めくって、そろえて、物の怪を祓え。</div>
     <button class="btn" id="btnNew">はじめる</button>
     <button class="btn sub endbtn" id="btnEndless">果てなき夜<small>エンドレス</small></button>
     <button class="btn sub" id="btnCont" style="display:none">つづきから</button>
@@ -517,7 +517,7 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
       <div class="ascdesc" id="ascDesc"></div>
     </div>
     <div class="kbdnote">キーボード：↑↓で選ぶ　Enterで決定　Escでもどる</div>
-    <div class="title-note">札をどんどんめくれ<br>同じ絵柄が2枚開いたら即発動<br>妖怪は待ってくれない</div>
+    <div class="title-note">札をどんどんめくれ<br>同じ絵柄が2枚開いたら即発動<br>物の怪は待ってくれない</div>
     <!-- 説明は画面の下段に（「はじめる」「つづきから」の近くに置かない） -->
     <div class="tsp"></div>
     <div class="title-links"><button class="btn sub" id="btnHow">遊び方</button><button class="btn sub" id="btnCards">図鑑</button><button class="btn sub" id="btnRec">記録</button></div>
@@ -698,7 +698,7 @@ const ACTS = [
   { easy:['gasha','kage'], normal:['gasha','raiju','hannya','kage'], elite:['nue','mukade'], boss:'orochi' },
 ];
 
-/* ---------- 闇（難度）：夜が深いほど妖怪が強い ---------- */
+/* ---------- 闇（難度）：夜が深いほど物の怪（敵）が強い ---------- */
 const ASC = [
   '',
   '強敵のHP +20%',
@@ -2855,7 +2855,7 @@ function actClear(){
   const h = Math.round(run.maxHp * 0.5);
   heal(h);
   save();
-  const next = run.endless && run.act > ACTS.length && (run.act - 1) % ACTS.length === 0 ? '<br>夜はまだ明けない。妖怪たちが強くなった' : '';
+  const next = run.endless && run.act > ACTS.length && (run.act - 1) % ACTS.length === 0 ? '<br>夜はまだ明けない。物の怪たちが強くなった' : '';
   chooser({ title:`第${run.act - 1}幕を越えた`, sub:`ひと息ついた。HP ${h} 回復<br>次は第${run.act}幕${next}`, items:[], btn:{ label:'すすむ', on:enterMap } });
 }
 function gameOver(){ endRun(false); }
@@ -3230,7 +3230,7 @@ async function drawCard(c){
   g.textAlign = 'left'; g.textBaseline = 'alphabetic';
   g.fillStyle = '#ece3cf'; g.font = `900 82px ${CARD_MIN}`; g.fillText('百鬼めくり', 64, 140);
   g.fillStyle = '#c4412b'; g.fillRect(64, 162, 410, 7);
-  g.fillStyle = '#c9a14a'; g.font = `700 25px ${CARD_MIN}`; g.fillText('めくって、そろえて、百鬼を祓え。', 64, 212);
+  g.fillStyle = '#c9a14a'; g.font = `700 25px ${CARD_MIN}`; g.fillText('めくって、そろえて、物の怪を祓え。', 64, 212);
   const foe = c.foe && PX[c.foe] ? c.foe : 'onibi';
   g.fillStyle = '#141620'; g.fillRect(64, 248, 410, 330);
   g.strokeStyle = '#3a3644'; g.lineWidth = 2; g.strokeRect(64, 248, 410, 330);
@@ -3305,9 +3305,10 @@ function showHowto(){
     items: HOWTO.map(([g, col, n, d]) => ({ html:`<div class="mini info" style="--k:${col}"><span class="mk">${g}</span></div><div><div class="nm">${n}</div><div class="ds">${d}</div></div>` })),
     btn:{ label:'もどる', on:enterTitle } });
 }
-/* ---------- 図鑑（札・お守り・妖怪） ----------
-   札は全部、お守りは手に入れたもの、妖怪は出会ったものだけ中身が見える */
-const DEX_TABS = [['card', '札'], ['relic', 'お守り'], ['foe', '妖怪']];
+/* ---------- 図鑑（札・お守り・物の怪） ----------
+   札は全部、お守りは手に入れたもの、物の怪（敵）は出会ったものだけ中身が見える。
+   呼び方：味方は「百鬼」（百鬼の行列・百鬼夜行）、敵は「物の怪」 */
+const DEX_TABS = [['card', '札'], ['relic', 'お守り'], ['foe', '物の怪']];
 function dexCards(){
   const unlocked = new Set(['zan', 'mamo', ...POOL]);
   const keys = Object.keys(SK).filter(k => k !== 'noroi').sort((a, b) => SK[a].r - SK[b].r).concat('noroi');
@@ -3340,7 +3341,7 @@ function dexFoes(dx){
     list.push([A.boss, a, '幕の主']);
   });
   const n = list.filter(([id]) => met[id]).length;
-  return { note:`出会った妖怪 ${n}/${list.length}`, items: list.map(([id, a, kind]) => {
+  return { note:`出会った物の怪 ${n}/${list.length}`, items: list.map(([id, a, kind]) => {
     const f = FOES[id], v = met[id], where = `第${a + 1}幕${kind ? 'の' + kind : ''}`;
     if (!v) return { html:`<div class="mini dexq">？</div><div><div class="nm">？？？　<small>${where}</small></div><div class="ds">まだ出会っていない</div></div>` };
     const acts = f.it.map(intentDex).join(' → ');
