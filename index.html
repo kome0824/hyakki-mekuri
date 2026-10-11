@@ -203,6 +203,25 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
   color:rgba(236,227,207,.55);pointer-events:none;font-family:var(--font)}
 body.pc .kh{display:block}
 .slot.empty .kh{display:none}
+.inpanel{width:calc(var(--u)*92)}
+.inrow{display:flex;align-items:center;gap:calc(var(--u)*1.6);margin-bottom:calc(var(--u)*2)}
+.inrow span{flex:none;width:calc(var(--u)*16);font-size:calc(var(--u)*3.4);color:var(--sub)}
+.inrow .pausebtn{flex:1;padding:calc(var(--u)*1.4) 0}
+.pausebtn.sel{color:var(--sumi);background:var(--kin);border-color:var(--kin)}
+.innote{margin-top:calc(var(--u)*1.6);font-size:calc(var(--u)*2.8);color:var(--sub);text-align:center}
+.kbwrap{display:flex;align-items:center;gap:calc(var(--u)*2)}
+.kb{flex:1;min-width:0}
+.kbr{display:flex;gap:1.2%;margin-bottom:1.2%}
+.kb i{flex:none;width:8.6%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:calc(var(--u)*.6);font-style:normal;
+  font-size:calc(var(--u)*2.4);font-weight:900;background:#0f0e14;border:1px solid var(--line);color:#5d5868}
+.kb i.on.l{background:var(--kin);color:var(--sumi);border-color:var(--kin)}
+.kb i.on.r{background:#7d6a3e;color:var(--paper);border-color:#7d6a3e}
+.kbarrow{color:var(--sub);font-size:calc(var(--u)*3.4)}
+.kbb{flex:none;display:grid;grid-template-columns:repeat(4,calc(var(--u)*4.6));gap:calc(var(--u)*.6)}
+.kbb i{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:calc(var(--u)*.5);font-style:normal;font-size:calc(var(--u)*2.4);font-weight:900}
+.kbb i.l{background:var(--kin);color:var(--sumi)}
+.kbb i.r{background:#7d6a3e;color:var(--paper)}
+.ovkb{width:calc(var(--u)*84)}
 .kbdnote{display:none;color:var(--sub);font-size:calc(var(--u)*3);text-align:center}
 body.pc .kbdnote{display:block}
 body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(var(--u)*.4)}
@@ -431,6 +450,12 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
 
   <section id="title" class="screen on">
     <div class="sndbar"><button class="pausebtn" id="btnInput">操作 自動</button><button class="pausebtn mutebtn" id="btnMute">音 オフ</button><button class="pausebtn" id="btnVol">音量</button></div>
+    <div class="volpanel inpanel" id="inPanel">
+      <div class="inrow"><span>端末</span><button class="pausebtn" data-inp="auto">自動</button><button class="pausebtn" data-inp="pc">PC</button><button class="pausebtn" data-inp="touch">スマホ</button></div>
+      <div class="inrow"><span>札のキー</span><button class="pausebtn" data-lay="left">左手</button><button class="pausebtn" data-lay="right">右手</button><button class="pausebtn" data-lay="both">両手</button></div>
+      <div class="kbdiag"></div>
+      <div class="innote">盤面の左2列＝濃い金、右2列＝薄い金。Escで一時停止</div>
+    </div>
     <div class="volpanel" id="volPanel"><div class="vol"><label><span>BGM</span><input type="range" min="0" max="100" step="5" class="volBgm"><b class="volBgmN"></b></label><label><span>効果音</span><input type="range" min="0" max="100" step="5" class="volSe"><b class="volSeN"></b></label></div></div>
     <div class="logo">百鬼めくり</div>
     <div class="logo-sub">めくって、そろえて、百鬼を祓え。</div>
@@ -485,7 +510,7 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
       <button class="btn sub" id="btnQuitBattle">タイトルへ</button>
       <button class="pausebtn mutebtn" id="btnMutePause">音 オフ</button>
       <div class="vol"><label><span>BGM</span><input type="range" min="0" max="100" step="5" class="volBgm"><b class="volBgmN"></b></label><label><span>効果音</span><input type="range" min="0" max="100" step="5" class="volSe"><b class="volSeN"></b></label></div>
-      <div class="ovnote kbdnote">札：1〜4・Q〜R・A〜F・Z〜V<br>右手なら 7〜0・U〜P・J〜;・M〜/<br>Esc：一時停止／再開</div>
+      <div class="kbdnote ovkb"><div class="inrow"><span>札のキー</span><button class="pausebtn" data-lay="left">左手</button><button class="pausebtn" data-lay="right">右手</button><button class="pausebtn" data-lay="both">両手</button></div><div class="kbdiag"></div><div class="innote">Esc：一時停止／再開</div></div>
       <div class="ovnote">タイトルに戻っても、「つづきから」でこの戦闘の今の状態から再開できます</div>
       <div class="ovrel"><div class="ovrel-t">持っているお守り</div><div class="ovrel-list" id="ovRelics"></div></div>
     </div>
@@ -825,7 +850,7 @@ function buildBoard(){
   for (let i = 0; i < SLOTS; i++){
     const el = document.createElement('div');
     el.className = 'slot';
-    el.innerHTML = `<div class="card"><div class="face back">百</div><div class="face front"></div></div><span class="kh">${KEY_LABEL[i]}</span>`;
+    el.innerHTML = `<div class="card"><div class="face back">百</div><div class="face front"></div></div><span class="kh">${curKeys()[i]}</span>`;
     el.addEventListener('pointerdown', e => { e.preventDefault(); tap(i); });
     bd.appendChild(el);
   }
@@ -1348,13 +1373,40 @@ applyVol();
 
 /* ---------- キーボード操作 ----------
    操作の種類：自動（マウス主体の端末ならPC）／スマホ／PC。PCでは札にキーの印を出す。
-   盤面：4×4と同じ形のキー（左手 1〜4・Q〜R・A〜F・Z〜V、右手 7〜0・U〜P・J〜;・M〜/）。Esc で一時停止。
+   盤面：4×4と同じ形のキー。配置は設定で 左手／右手／両手 から選ぶ。Esc で一時停止。
    ほかの画面：↑↓←→ で選ぶ、Enter・Space で決定、Esc・Backspace で「もどる」、1〜9 で選択肢をそのまま選ぶ */
-const KEY_CODES = [
-  ['Digit1','Digit2','Digit3','Digit4','KeyQ','KeyW','KeyE','KeyR','KeyA','KeyS','KeyD','KeyF','KeyZ','KeyX','KeyC','KeyV'],
-  ['Digit7','Digit8','Digit9','Digit0','KeyU','KeyI','KeyO','KeyP','KeyJ','KeyK','KeyL','Semicolon','KeyM','Comma','Period','Slash'],
-];
-const KEY_LABEL = ['1','2','3','4','Q','W','E','R','A','S','D','F','Z','X','C','V'];
+// 札のキー配置（盤面の左上から右へ、上の段から下の段へ16個）
+//   左手：左手だけで4×4。右手：右手だけで4×4。
+//   両手：盤面の左2列を左手の人さし指・中指（3 4／E R／D F／C V）、右2列を右手の人さし指・中指（8 9／U I／J K／M ,）。F と J がホームポジション
+const LAYOUTS = {
+  left: { n:'左手', k:['1','2','3','4','Q','W','E','R','A','S','D','F','Z','X','C','V'] },
+  right:{ n:'右手', k:['7','8','9','0','U','I','O','P','J','K','L',';','M',',','.','/'] },
+  both: { n:'両手', k:['3','4','8','9','E','R','U','I','D','F','J','K','C','V','M',','] },
+};
+const KEY_CODE = { ';':'Semicolon', ',':'Comma', '.':'Period', '/':'Slash' };
+const keyCode = k => KEY_CODE[k] || (/\d/.test(k) ? 'Digit' + k : 'Key' + k);
+const KEYS_KEY = 'hyakki-mekuri.keys';
+let KEYLAY = 'left';
+try { KEYLAY = localStorage.getItem(KEYS_KEY) || 'left'; } catch(e){}
+const curKeys = () => (LAYOUTS[KEYLAY] || LAYOUTS.left).k;
+// キーボードの絵：使うキーを金色にし、盤面の左2列と右2列で色の濃さを変える
+const KB_ROWS = [['1','2','3','4','5','6','7','8','9','0'], ['Q','W','E','R','T','Y','U','I','O','P'], ['A','S','D','F','G','H','J','K','L',';'], ['Z','X','C','V','B','N','M',',','.','/']];
+function kbDiagram(){
+  const ks = curKeys();
+  const rows = KB_ROWS.map((row, r) => `<div class="kbr" style="margin-left:${[0, .5, .8, 1.3][r] * 6.4}%">` + row.map(k => {
+    const i = ks.indexOf(k);
+    return `<i class="${i < 0 ? '' : i % 4 < 2 ? 'on l' : 'on r'}">${k}</i>`;
+  }).join('') + '</div>').join('');
+  const board = '<div class="kbb">' + ks.map((k, i) => `<i class="${i % 4 < 2 ? 'l' : 'r'}">${k}</i>`).join('') + '</div>';
+  return `<div class="kbwrap"><div class="kb">${rows}</div><div class="kbarrow">→</div>${board}</div>`;
+}
+function renderKeys(){
+  document.querySelectorAll('.kbdiag').forEach(el => el.innerHTML = kbDiagram());
+  document.querySelectorAll('#board .kh').forEach((el, i) => el.textContent = curKeys()[i]);
+  document.querySelectorAll('[data-lay]').forEach(b => b.classList.toggle('sel', b.dataset.lay === KEYLAY));
+  document.querySelectorAll('[data-inp]').forEach(b => b.classList.toggle('sel', b.dataset.inp === INPUT));
+}
+function setKeys(v){ KEYLAY = v; try { localStorage.setItem(KEYS_KEY, v); } catch(e){} renderKeys(); }
 const INPUT_KEY = 'hyakki-mekuri.input';
 let INPUT = 'auto';
 try { INPUT = localStorage.getItem(INPUT_KEY) || 'auto'; } catch(e){}
@@ -1365,10 +1417,11 @@ function applyInput(){
   const el = $('#btnInput');
   if (el) el.textContent = '操作 ' + (INPUT === 'auto' ? `自動(${pc ? 'PC' : 'スマホ'})` : INPUT === 'pc' ? 'PC' : 'スマホ');
 }
-function cycleInput(){
-  INPUT = { auto:'pc', pc:'touch', touch:'auto' }[INPUT];
+function setInput(v){
+  INPUT = v;
   try { localStorage.setItem(INPUT_KEY, INPUT); } catch(e){}
   applyInput();
+  renderKeys();
 }
 // 今の画面で選べるもの（表示されていて押せるボタン）。マップは行ける所を先に
 function navItems(){
@@ -1379,6 +1432,7 @@ function navItems(){
   if (scr.id === 'map') list = [...list.filter(b => b.classList.contains('can')), ...list.filter(b => !b.classList.contains('node'))];
   if ($('#runbar').classList.contains('on')) list = list.concat([...$('#runbar').querySelectorAll('button')].filter(vis));
   if ($('#volPanel').classList.contains('on')) list = list.filter(b => b.closest('.sndbar'));
+  if ($('#inPanel').classList.contains('on')) list = [...$('#inPanel').querySelectorAll('button')];
   return list;
 }
 const vis = el => !!(el.offsetParent || el.getClientRects().length) && getComputedStyle(el).visibility !== 'hidden';
@@ -1402,6 +1456,7 @@ function kmove(d){
 function kback(){
   if ($('#battle').classList.contains('on')){ if (B && !B.over) setPause(!B.paused); return; }
   if ($('#volPanel').classList.contains('on')) return $('#volPanel').classList.remove('on');
+  if ($('#inPanel').classList.contains('on')) return $('#inPanel').classList.remove('on');
   const b = $('#cBtn');
   if ($('#choose').classList.contains('on') && vis(b) && /もどる|店を出る/.test(b.textContent)) b.click();
 }
@@ -1413,7 +1468,7 @@ document.addEventListener('keydown', e => {
   const c = e.code;
   // 盤面
   if ($('#battle').classList.contains('on') && B && !B.over && !B.paused){
-    const i = KEY_CODES[0].indexOf(c) >= 0 ? KEY_CODES[0].indexOf(c) : KEY_CODES[1].indexOf(c);
+    const i = curKeys().findIndex(k => keyCode(k) === c);
     if (i >= 0){ e.preventDefault(); if (!e.repeat) tap(i); return; }
   }
   if (c === 'Escape' || c === 'Backspace'){ e.preventDefault(); kback(); return; }
@@ -3054,9 +3109,13 @@ function showCardGuide(){
     btn:{ label:'もどる', on:enterTitle } });
 }
 $('#btnHow').addEventListener('click', showHowto);
-$('#btnVol').addEventListener('click', () => $('#volPanel').classList.toggle('on'));
-$('#btnInput').addEventListener('click', cycleInput);
+$('#btnVol').addEventListener('click', () => { $('#inPanel').classList.remove('on'); $('#volPanel').classList.toggle('on'); });
+$('#btnInput').addEventListener('click', () => { $('#volPanel').classList.remove('on'); $('#inPanel').classList.toggle('on'); });
+document.querySelectorAll('[data-inp]').forEach(b => b.addEventListener('click', () => setInput(b.dataset.inp)));
+document.querySelectorAll('[data-lay]').forEach(b => b.addEventListener('click', () => setKeys(b.dataset.lay)));
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#inPanel, #btnInput')) $('#inPanel').classList.remove('on'); });
 applyInput();
+renderKeys();
 document.querySelectorAll('.mutebtn').forEach(x => x.addEventListener('click', () => { setMute(!MUTED); if (!MUTED) sfx('ui'); }));
 document.addEventListener('pointerdown', e => { if (!e.target.closest('#volPanel, #btnVol')) $('#volPanel').classList.remove('on'); });
 document.querySelectorAll('.volBgm').forEach(x => x.addEventListener('input', () => setVol('bgm', +x.value)));
