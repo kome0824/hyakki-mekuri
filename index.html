@@ -434,6 +434,8 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
   background:var(--panel);border:1px solid var(--line);text-align:left;width:100%}
 .pick:not(.static):active{transform:scale(.98);border-color:var(--kin)}
 .pick[disabled]{opacity:.4}
+.pick.danger{border-color:#7a2c20}
+.pick.danger .nm{color:#e0705a}
 .pick > div:last-of-type{flex:1;min-width:0}
 /* 札の見本（戦闘の札と同じ見た目） */
 .mini{flex:none;width:calc(var(--u)*13);height:calc(var(--u)*13);border-radius:calc(var(--u)*1.2);display:flex;align-items:center;justify-content:center;
@@ -1509,7 +1511,7 @@ function kfocus(el){
   if (el){ el.classList.add('kfocus'); el.scrollIntoView({ block:'nearest' }); }
 }
 // まだ何も選んでいないときは、いちばん押しそうなもの（はじめる・行ける所・最初の選択肢・つづける）から
-function kdefault(list){ return list.find(b => b.matches('#btnNew, #btnCont, .node.can, .pick:not(.static), #btnResume, #cBtn')) || list[0]; }
+function kdefault(list){ return list.find(b => b.matches('#btnNew, #btnCont, .node.can, .pick:not(.static):not(.danger), #btnResume, #cBtn')) || list[0]; }
 const guarded = () => { const s = $('.screen.on'); return !!(s && s.classList.contains('guard')); };
 function kmove(d){
   const list = navItems();
@@ -1554,7 +1556,7 @@ document.addEventListener('keydown', e => {
   // 選択の画面：1〜9 でそのまま選ぶ
   const m = c.match(/^(?:Digit|Numpad)([1-9])$/);
   if (m && $('#choose').classList.contains('on') && !guarded()){
-    const picks = [...$('#cItems').querySelectorAll('.pick')].filter(b => !b.disabled && !b.classList.contains('static'));
+    const picks = [...$('#cItems').querySelectorAll('.pick')].filter(b => !b.disabled && !b.classList.contains('static') && !b.classList.contains('danger'));
     const b = picks[+m[1] - 1];
     if (b){ e.preventDefault(); sfx('ui'); b.click(); }
   }
@@ -3146,8 +3148,24 @@ function showRecords(){
   chooser({ info:true, title:'記録', sub,
     items: m.hist.map(h => ({ html:`<div class="mini info" style="--k:${h.win ? '#c9a14a' : h.e ? '#6a5aa8' : '#4a4658'}"><span class="mk">${h.win ? '明' : h.e ? '果' : '倒'}</span></div>`
       + `<div><div class="nm">${h.win ? '夜明け' : `${h.e ? '果てなき夜 ' : ''}第${h.act}幕 ${h.floor}階`}${h.asc ? `　<small>闇${h.asc}</small>` : ''}</div>`
-      + `<div class="ds">${fmtDate(h.d)}　得点${h.score}・最大${h.combo}連・${h.deg}℃</div></div>` })),
+      + `<div class="ds">${fmtDate(h.d)}　得点${h.score}・最大${h.combo}連・${h.deg}℃</div></div>` }))
+      .concat([{ cls:'danger', html:'<div class="mini info" style="--k:#3a2622"><span class="mk">消</span></div><div><div class="nm">データを全部消す</div><div class="ds">最初に遊んだときの状態に戻す（確認があります）</div></div>', on:confirmReset }]),
     btn:{ label:'もどる', on:enterTitle } });
+}
+/* ---------- 完全リセット ----------
+   記録・解放・図鑑・続きの周回と、設定（音・音量・キー配置・操作）を全部消して読み込み直す */
+function confirmReset(){
+  chooser({ info:true, title:'データを全部消す',
+    sub:'次のものが全部消えて、最初に遊んだときの状態に戻ります。<b>元には戻せません。</b><br>記録・解放した札とお守り・図鑑・闇の段階・つづきの周回・音や操作の設定',
+    items:[{ cls:'danger', html:'<div class="mini info" style="--k:#a8321f"><span class="mk">消</span></div><div><div class="nm">全部消す</div><div class="ds">押すとすぐ消えます</div></div>', on:doReset }],
+    btn:{ label:'もどる', on:showRecords }, guard:true });   // 開いてすぐは押せない（勢いで消さないように）
+}
+function doReset(){
+  try {
+    Object.keys(localStorage).filter(k => k.startsWith('hyakki-mekuri.')).forEach(k => localStorage.removeItem(k));
+    localStorage.removeItem(OLD_SAVE_KEY);
+  } catch(e){}
+  location.reload();
 }
 $('#btnRec').addEventListener('click', showRecords);
 // シェア：「結果を共有」ボタン1つ。結果の画像と文章を、スマホは端末の共有メニューに渡す（X・LINE・Discord などを選ぶと画像付きで投稿できる）。
