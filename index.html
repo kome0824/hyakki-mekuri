@@ -1019,7 +1019,7 @@ function sfxInit(){
     // 効果音は控えめの音量でまとめ、BGMと一緒にコンプレッサーを通す
     const comp = SFX.ctx.createDynamicsCompressor(), g = SFX.ctx.createGain(), se = SFX.ctx.createGain();
     comp.threshold.value = -14; comp.ratio.value = 4;
-    g.gain.value = .85; se.gain.value = seLevel();
+    g.gain.value = .78; se.gain.value = seLevel();
     se.connect(comp); comp.connect(g); g.connect(SFX.ctx.destination);
     SFX.out = se; SFX.master = comp;
   } catch(e){ SFX.ctx = null; }
