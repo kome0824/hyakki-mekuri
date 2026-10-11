@@ -46,7 +46,10 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .btn[disabled]{opacity:.4;pointer-events:none}
 
 /* ---------- タイトル ---------- */
-#title{justify-content:center;gap:calc(var(--u)*4)}
+/* 上の余白・中身・下の余白・下段のボタンの順。入りきらない短い画面では余白が縮み、それでも足りなければスクロール */
+#title{justify-content:flex-start;gap:calc(var(--u)*2.6);overflow-y:auto;padding:calc(var(--u)*11) 0 calc(var(--u)*3)}
+#title > :not(.tsp){flex-shrink:0}
+#title::before,.tsp{content:"";flex:1 1 0;min-height:0}
 .logo{font-family:var(--mincho);font-size:calc(var(--u)*15);font-weight:900;line-height:1;letter-spacing:calc(var(--u)*.6);color:var(--paper);
   padding-bottom:calc(var(--u)*2);border-bottom:calc(var(--u)*.6) solid var(--shu)}
 .logo-sub{font-family:var(--mincho);color:var(--kin);font-size:calc(var(--u)*3.8);letter-spacing:.12em}
@@ -62,7 +65,7 @@ button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
 .vol label span{flex:none;width:calc(var(--u)*11);white-space:nowrap}
 .vol input{flex:none;width:calc(var(--u)*38);accent-color:var(--kin)}
 .vol b{flex:none;width:calc(var(--u)*9);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--sub)}
-.title-links{position:absolute;left:0;right:0;bottom:calc(var(--u)*7);display:flex;justify-content:center;gap:calc(var(--u)*2.4)}
+.title-links{flex:none;display:flex;justify-content:center;gap:calc(var(--u)*2.4)}
 .title-links .btn{min-width:calc(var(--u)*27);padding:calc(var(--u)*2.2) calc(var(--u)*2);font-size:calc(var(--u)*3.8)}
 .endbtn{padding:calc(var(--u)*2.2) calc(var(--u)*5);font-size:calc(var(--u)*4.4)}
 .endbtn small{display:block;font-size:.62em;color:var(--sub);letter-spacing:.1em;margin-top:calc(var(--u)*.4)}
@@ -442,6 +445,7 @@ body.kbd .kfocus{outline:calc(var(--u)*.7) solid var(--kin);outline-offset:calc(
     <div class="kbdnote">キーボード：↑↓で選ぶ　Enterで決定　Escでもどる</div>
     <div class="title-note">札をどんどんめくれ<br>同じ絵柄が2枚開いたら即発動<br>妖怪は待ってくれない</div>
     <!-- 説明は画面の下段に（「はじめる」「つづきから」の近くに置かない） -->
+    <div class="tsp"></div>
     <div class="title-links"><button class="btn sub" id="btnHow">遊び方</button><button class="btn sub" id="btnCards">札の説明</button><button class="btn sub" id="btnRec">記録</button></div>
   </section>
 
